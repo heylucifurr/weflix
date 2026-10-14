@@ -65,10 +65,13 @@ extension View {
         }
     }
 
-    /// An opaque reading surface covering only the trailing portion of the screen.
+    /// A floating glass panel covering only the trailing portion of the screen,
+    /// darkened so text stays legible over bright video or artwork.
     /// Also used directly by the player, without presenting/remounting the video.
     struct TVContextPanelView<Content: View>: View {
         @ViewBuilder var content: () -> Content
+
+        private let shape = RoundedRectangle(cornerRadius: 36, style: .continuous)
 
         var body: some View {
             GeometryReader { geometry in
@@ -78,11 +81,11 @@ extension View {
                         .padding(32)
                         .frame(width: min(720, geometry.size.width * 0.44))
                         .frame(maxHeight: .infinity)
-                        .background(Color("Background").opacity(0.98))
-                        .overlay(alignment: .leading) {
-                            Rectangle().fill(Color.white.opacity(0.15)).frame(width: 1)
-                        }
-                        .shadow(color: .black.opacity(0.5), radius: 30, x: -12)
+                        .background(Color.black.opacity(0.5), in: shape)
+                        .glassEffect(.regular, in: shape)
+                        .shadow(color: .black.opacity(0.35), radius: 30, x: -8)
+                        .padding(.vertical, 40)
+                        .padding(.trailing, 40)
                 }
             }
             .ignoresSafeArea()
