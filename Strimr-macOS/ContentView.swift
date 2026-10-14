@@ -71,9 +71,14 @@ struct ContentView: View {
     private var sessionContent: some View {
         switch sessionManager.status {
         case .hydrating:
-            ProgressView(sessionManager.loadingPhase.title)
-                .controlSize(.large)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            if let profile = sessionManager.activeProfile {
+                ProfileActivationView(profile: profile)
+                    .transition(.profileActivation)
+            } else {
+                ProgressView(sessionManager.loadingPhase.title)
+                    .controlSize(.large)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
         case .needsAccount:
             AccountSetupView(purpose: .firstLaunch, sessionManager: sessionManager)
         case .needsProfileSelection:

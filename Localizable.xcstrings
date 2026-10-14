@@ -1748,28 +1748,6 @@
         }
       }
     },
-    "auth.profile.header.subtitle" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choose a profile to continue"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choisissez un profil pour continuer"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "选择一个配置以继续"
-          }
-        }
-      }
-    },
     "auth.profile.header.title" : {
       "localizations" : {
         "en" : {
@@ -1858,28 +1836,6 @@
         }
       }
     },
-    "auth.profile.pin.required" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PIN Required"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Code PIN requis"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "需要PIN码"
-          }
-        }
-      }
-    },
     "auth.profile.pin.title" : {
       "localizations" : {
         "en" : {
@@ -1898,28 +1854,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "输入PIN码"
-          }
-        }
-      }
-    },
-    "auth.profile.title" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Select Profile"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sélectionner un profil"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "选择用户"
           }
         }
       }
