@@ -3,6 +3,9 @@ import SwiftUI
 @MainActor
 struct HomeRowsSettingsView: View {
     @State private var viewModel: HomeViewModel
+    #if os(tvOS)
+        @Environment(SettingsNavigation.self) private var navigation
+    #endif
 
     init(sessionManager: SessionManager, settingsManager: SettingsManager) {
         _viewModel = State(initialValue: HomeViewModel(
@@ -15,9 +18,11 @@ struct HomeRowsSettingsView: View {
         settingsContainer
             .task {
                 await viewModel.load()
+                await viewModel.loadCatalog()
             }
             .refreshable {
                 await viewModel.reload()
+                await viewModel.loadCatalog()
             }
     }
 
@@ -27,7 +32,7 @@ struct HomeRowsSettingsView: View {
             SettingsList { sections }
         #else
             List { sections }
-                .listStyle(listStyle)
+                .listStyle(homeRowsListStyle)
                 .navigationTitle("settings.interface.homeRows.title")
         #endif
     }
@@ -39,54 +44,56 @@ struct HomeRowsSettingsView: View {
                 .foregroundStyle(.secondary)
         }
 
-        Section("settings.interface.homeRows.section") {
+        let shownRows = viewModel.shownRowsForEditing
+        Section {
             if viewModel.isLoading, viewModel.availableRows.isEmpty {
                 ProgressView("home.loading")
                     .frame(maxWidth: .infinity)
             } else if let errorMessage = viewModel.errorMessage, viewModel.availableRows.isEmpty {
                 Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(.red)
-            } else if viewModel.orderedRowsForEditing.isEmpty {
+            } else if shownRows.isEmpty {
                 Text("common.empty.nothingToShow")
                     .foregroundStyle(.secondary)
             } else {
-                ForEach(Array(viewModel.orderedRowsForEditing.enumerated()), id: \.element.id) { index, row in
-                    rowControls(at: index, row: row)
+                ForEach(Array(shownRows.enumerated()), id: \.element.id) { index, row in
+                    shownRowControls(at: index, row: row, count: shownRows.count)
                 }
             }
+        } header: {
+            Text("settings.interface.homeRows.section")
         }
+
+        rowGroupSections
 
         Section {
             Button("settings.interface.homeRows.restoreDefaults", role: .destructive) {
                 viewModel.resetRowPreferences()
             }
             #if os(tvOS)
-            .settingsFocus("restoreRows", isDefault: viewModel.orderedRowsForEditing.isEmpty)
+            .settingsFocus("restoreRows", isDefault: shownRows.isEmpty)
             #endif
         }
     }
 
-    @ViewBuilder
-    private func rowControls(at index: Int, row: HomeRow) -> some View {
-        #if os(tvOS)
-            let isVisible = viewModel.isRowVisible(row.id)
+    // MARK: - Shown rows
 
-            VStack(alignment: .leading, spacing: 12) {
-                Text(row.title)
-                    .font(.headline)
-                    .foregroundStyle(isVisible ? .primary : .secondary)
-                serverSubtitle(for: row)
+    @ViewBuilder
+    private func shownRowControls(at index: Int, row: HomeRow, count: Int) -> some View {
+        #if os(tvOS)
+            HStack(spacing: 24) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(row.title)
+                        .font(.headline)
+                    rowSubtitle(for: row)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
 
                 HStack(spacing: 12) {
                     Button {
-                        viewModel.setRowVisible(row.id, visible: !isVisible)
+                        viewModel.setRowVisible(row.id, visible: false)
                     } label: {
-                        tvOSActionLabel(
-                            isVisible
-                                ? "settings.interface.homeRows.hide"
-                                : "settings.interface.homeRows.show",
-                            systemImage: isVisible ? "eye" : "eye.slash",
-                        )
+                        tvOSActionLabel("settings.interface.homeRows.hide", systemImage: "eye")
                     }
                     .buttonStyle(.bordered)
                     .settingsFocus("row-\(row.id)-visibility", isDefault: index == 0)
@@ -97,7 +104,7 @@ struct HomeRowsSettingsView: View {
                         tvOSActionLabel("settings.interface.homeRows.moveUp", systemImage: "arrow.up")
                     }
                     .buttonStyle(.bordered)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(index == 0 ? .tertiary : .secondary)
                     .settingsFocus("row-\(row.id)-up", exitsLeft: false)
                     .disabled(index == 0)
 
@@ -107,22 +114,19 @@ struct HomeRowsSettingsView: View {
                         tvOSActionLabel("settings.interface.homeRows.moveDown", systemImage: "arrow.down")
                     }
                     .buttonStyle(.bordered)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(index == count - 1 ? .tertiary : .secondary)
                     .settingsFocus("row-\(row.id)-down", exitsLeft: false)
-                    .disabled(index == viewModel.orderedRowsForEditing.count - 1)
+                    .disabled(index == count - 1)
                 }
+                .fixedSize()
             }
-            .padding(.vertical, 8)
         #else
             HStack(spacing: 12) {
                 Toggle(isOn: Binding(
-                    get: { viewModel.isRowVisible(row.id) },
+                    get: { true },
                     set: { viewModel.setRowVisible(row.id, visible: $0) },
                 )) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(row.title)
-                        serverSubtitle(for: row)
-                    }
+                    rowLabel(row)
                 }
 
                 Button {
@@ -130,7 +134,7 @@ struct HomeRowsSettingsView: View {
                 } label: {
                     Image(systemName: "arrow.up")
                 }
-                .foregroundStyle(.secondary)
+                .foregroundStyle(index == 0 ? .tertiary : .secondary)
                 .accessibilityLabel(Text("settings.interface.homeRows.moveUp"))
                 .disabled(index == 0)
 
@@ -139,37 +143,207 @@ struct HomeRowsSettingsView: View {
                 } label: {
                     Image(systemName: "arrow.down")
                 }
-                .foregroundStyle(.secondary)
+                .foregroundStyle(index == count - 1 ? .tertiary : .secondary)
                 .accessibilityLabel(Text("settings.interface.homeRows.moveDown"))
-                .disabled(index == viewModel.orderedRowsForEditing.count - 1)
+                .disabled(index == count - 1)
+            }
+            #if os(iOS)
+            // Otherwise a tap anywhere on the List row triggers every button in it.
+            // Borderless buttons no longer dim when disabled, hence the explicit tertiary style above.
+            .buttonStyle(.borderless)
+            #endif
+        #endif
+    }
+
+    // MARK: - Libraries
+
+    @ViewBuilder
+    private var rowGroupSections: some View {
+        #if os(macOS)
+            ForEach(viewModel.rowGroups) { group in
+                let hiddenRows = group.rows.filter { !viewModel.isRowVisible($0.id) }
+                if !hiddenRows.isEmpty {
+                    Section {
+                        ForEach(hiddenRows) { row in
+                            Toggle(row.title, isOn: Binding(
+                                get: { false },
+                                set: { viewModel.setRowVisible(row.id, visible: $0) },
+                            ))
+                        }
+                    } header: {
+                        HomeRowGroupTitle.text(for: group)
+                    } footer: {
+                        if group.isExcludedFromServerHome {
+                            Text("settings.homeRows.excludedFromServerHome")
+                        }
+                    }
+                }
+            }
+        #else
+            let groups = viewModel.rowGroups
+            if !groups.isEmpty {
+                Section("settings.interface.homeRows.addRows") {
+                    ForEach(groups) { group in
+                        rowGroupLink(group)
+                    }
+                }
             }
         #endif
     }
 
-    /// Tells apart two "Recently added" rows of different servers.
+    #if !os(macOS)
+        @ViewBuilder
+        private func rowGroupLink(_ group: HomeRowGroup) -> some View {
+            #if os(tvOS)
+                Button {
+                    navigation.push(HomeRowGroupTitle.key(for: group)) {
+                        HomeRowGroupSettingsView(viewModel: viewModel, groupID: group.id)
+                    }
+                } label: {
+                    HStack(spacing: 20) {
+                        rowGroupLabel(group)
+                        Spacer(minLength: 16)
+                        rowGroupCount(group)
+                            .foregroundStyle(.secondary)
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .settingsFocus("group-\(group.id)")
+            #else
+                NavigationLink {
+                    HomeRowGroupSettingsView(viewModel: viewModel, groupID: group.id)
+                } label: {
+                    LabeledContent {
+                        rowGroupCount(group)
+                    } label: {
+                        rowGroupLabel(group)
+                    }
+                }
+            #endif
+        }
+
+        private func rowGroupLabel(_ group: HomeRowGroup) -> some View {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(HomeRowGroupTitle.key(for: group))
+                if let serverName = group.serverName {
+                    Text("settings.homeRows.serverSubtitle \(serverName)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+
+        private func rowGroupCount(_ group: HomeRowGroup) -> Text {
+            let shown = group.rows.count(where: { viewModel.isRowVisible($0.id) })
+            return Text("settings.interface.homeRows.groupCount \(shown) \(group.rows.count)")
+        }
+    #endif
+
+    // MARK: - Helpers
+
+    private func rowLabel(_ row: HomeRow) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(row.title)
+            rowSubtitle(for: row)
+        }
+    }
+
+    /// Tells apart rows sharing a title in different libraries or servers.
     @ViewBuilder
-    private func serverSubtitle(for row: HomeRow) -> some View {
-        if let serverName = row.serverName {
-            Text("settings.homeRows.serverSubtitle \(serverName)")
+    private func rowSubtitle(for row: HomeRow) -> some View {
+        if let subtitle = subtitle(for: row) {
+            subtitle
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
     }
 
-    private func tvOSActionLabel(_ title: LocalizedStringKey, systemImage: String) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: systemImage)
-        }
-        .accessibilityLabel(Text(title))
+    private func subtitle(for row: HomeRow) -> Text? {
+        let server = row.serverName.map { Text("settings.homeRows.serverSubtitle \($0)") }
+        guard let libraryName = row.libraryName else { return server }
+        guard let server else { return Text(verbatim: libraryName) }
+        return Text(verbatim: "\(libraryName) · ") + server
     }
 
-    private var listStyle: some ListStyle {
+    #if os(tvOS)
+        private func tvOSActionLabel(_ title: LocalizedStringKey, systemImage: String) -> some View {
+            HStack(spacing: 12) {
+                Image(systemName: systemImage)
+            }
+            .accessibilityLabel(Text(title))
+        }
+    #endif
+}
+
+#if !os(tvOS)
+    private var homeRowsListStyle: some ListStyle {
         #if os(macOS)
             .inset
-        #elseif os(tvOS)
-            .plain
         #else
             .insetGrouped
         #endif
+    }
+#endif
+
+/// Every row of one library, turned on and off in place.
+@MainActor
+struct HomeRowGroupSettingsView: View {
+    let viewModel: HomeViewModel
+    let groupID: String
+
+    var body: some View {
+        let group = viewModel.rowGroups.first { $0.id == groupID }
+        #if os(tvOS)
+            SettingsList { section(group) }
+        #else
+            List { section(group) }
+                .listStyle(homeRowsListStyle)
+                .navigationTitle(group.map { Text(HomeRowGroupTitle.key(for: $0)) } ?? Text(verbatim: ""))
+        #endif
+    }
+
+    private func section(_ group: HomeRowGroup?) -> some View {
+        Section {
+            if let group {
+                ForEach(Array(group.rows.enumerated()), id: \.element.id) { index, row in
+                    Toggle(row.title, isOn: Binding(
+                        get: { viewModel.isRowVisible(row.id) },
+                        set: { viewModel.setRowVisible(row.id, visible: $0) },
+                    ))
+                    #if os(tvOS)
+                    .settingsFocus("row-\(row.id)", isDefault: index == 0)
+                    #endif
+                }
+            } else {
+                Text("common.empty.nothingToShow")
+                    .foregroundStyle(.secondary)
+            }
+        } header: {
+            if let serverName = group?.serverName {
+                Text("settings.homeRows.serverSubtitle \(serverName)")
+            }
+        } footer: {
+            if group?.isExcludedFromServerHome == true {
+                Text("settings.homeRows.excludedFromServerHome")
+            }
+        }
+    }
+}
+
+private enum HomeRowGroupTitle {
+    static func key(for group: HomeRowGroup) -> LocalizedStringKey {
+        group.libraryName.map { LocalizedStringKey(stringLiteral: $0) }
+            ?? "settings.interface.homeRows.otherRows"
+    }
+
+    static func text(for group: HomeRowGroup) -> Text {
+        let server = group.serverName.map { Text("settings.homeRows.serverSubtitle \($0)") }
+        guard let libraryName = group.libraryName else {
+            return server ?? Text("settings.interface.homeRows.otherRows")
+        }
+        guard let server else { return Text(verbatim: libraryName) }
+        return Text(verbatim: "\(libraryName) · ") + server
     }
 }

@@ -16342,6 +16342,28 @@
         }
       }
     },
+    "settings.homeRows.excludedFromServerHome" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Excluded from the home screen on the server"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exclue de l’accueil sur le serveur"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已在服务器上从主页排除"
+          }
+        }
+      }
+    },
     "settings.homeRows.serverSubtitle %@" : {
       "localizations" : {
         "en" : {
@@ -16556,6 +16578,28 @@
         }
       }
     },
+    "settings.interface.homeRows.addRows" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add rows"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter des rangées"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加内容行"
+          }
+        }
+      }
+    },
     "settings.interface.homeRows.description" : {
       "localizations" : {
         "en" : {
@@ -16574,6 +16618,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "显示、隐藏并重新排序主页上的内容行。"
+          }
+        }
+      }
+    },
+    "settings.interface.homeRows.groupCount %lld %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld of %2$lld"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld sur %2$lld"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld / %2$lld"
           }
         }
       }
@@ -16644,6 +16710,28 @@
         }
       }
     },
+    "settings.interface.homeRows.otherRows" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Other rows"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Autres rangées"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "其他内容行"
+          }
+        }
+      }
+    },
     "settings.interface.homeRows.restoreDefaults" : {
       "localizations" : {
         "en" : {
@@ -16684,28 +16772,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "主页"
-          }
-        }
-      }
-    },
-    "settings.interface.homeRows.show" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Show row"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Afficher la rangée"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "显示内容行"
           }
         }
       }
