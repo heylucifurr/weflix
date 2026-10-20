@@ -33,6 +33,10 @@ final class SeerrMediaDetailViewModel {
     var isLoadingSimilar = false
     var recommendationsErrorMessage: String?
     var similarErrorMessage: String?
+    var ratings: SeerrMediaRatings?
+    var collection: SeerrCollection?
+    var isRequestingCollection = false
+    var collectionErrorMessage: String?
 
     init(
         media: SeerrMedia,
@@ -62,15 +66,6 @@ final class SeerrMediaDetailViewModel {
         case .none:
             media.title ?? media.name ?? ""
         }
-    }
-
-    var secondaryLabel: String? {
-        yearText
-    }
-
-    var tertiaryLabel: String? {
-        guard media.mediaType == .tv else { return nil }
-        return seasonCountText
     }
 
     var yearText: String? {
@@ -185,6 +180,101 @@ final class SeerrMediaDetailViewModel {
             errorMessage = message
             seasonsErrorMessage = message
         }
+    }
+
+    func loadRatings() async {
+        guard let baseURL else { return }
+        let repository = SeerrMediaRepository(baseURL: baseURL, session: session)
+        switch media.mediaType {
+        case .movie:
+            ratings = try? await repository.getMovieRatings(id: media.id)
+        case .tv:
+            ratings = try? await repository.getTVRatings(id: media.id)
+        case .person, .none:
+            ratings = nil
+        }
+    }
+
+    func loadCollection() async {
+        guard media.mediaType == .movie, let summary = media.collection else {
+            collection = nil
+            return
+        }
+        guard let baseURL else { return }
+        let repository = SeerrMediaRepository(baseURL: baseURL, session: session)
+        if let refreshed = try? await repository.getCollection(id: summary.id) {
+            collection = refreshed
+        }
+    }
+
+    var collectionRequestableParts: [SeerrMedia] {
+        guard canRequestStandard, hasQuotaForMedia else { return [] }
+        let parts = collection?.parts ?? []
+        let missing = parts.filter { part in
+            guard part.mediaType == nil || part.mediaType == .movie else { return false }
+            let status = part.mediaInfo?.status
+            return status == nil || status == .unknown || status == .deleted
+        }
+        guard let quota = quotaRestriction, quota.restricted else { return missing }
+        return Array(missing.prefix(max(0, quota.remaining ?? 0)))
+    }
+
+    var isCollectionLimitedByQuota: Bool {
+        guard let quota = quotaRestriction, quota.restricted else { return false }
+        let parts = collection?.parts ?? []
+        let missingCount = parts.count(where: { part in
+            let status = part.mediaInfo?.status
+            return (part.mediaType == nil || part.mediaType == .movie)
+                && (status == nil || status == .unknown || status == .deleted)
+        })
+        return missingCount > collectionRequestableParts.count
+    }
+
+    var collectionQuotaRemaining: Int {
+        quotaRestriction?.remaining ?? 0
+    }
+
+    func requestCollection() async {
+        guard let baseURL else { return }
+        let parts = collectionRequestableParts
+        guard !parts.isEmpty else { return }
+
+        isRequestingCollection = true
+        collectionErrorMessage = nil
+        defer { isRequestingCollection = false }
+
+        let repository = SeerrRequestRepository(baseURL: baseURL, session: session)
+        var failedCount = 0
+        for part in parts {
+            let payload = SeerrMediaRequestPayload(
+                mediaId: part.id,
+                mediaType: .movie,
+                is4k: false,
+                tvdbId: nil,
+                seasons: nil,
+                serverId: nil,
+                profileId: nil,
+                rootFolder: nil,
+                tags: nil,
+            )
+            do {
+                try await repository.createRequest(payload)
+            } catch {
+                failedCount += 1
+            }
+        }
+
+        if failedCount > 0 {
+            let succeeded = parts.count - failedCount
+            collectionErrorMessage = String(localized: "seerr.collection.requestResult \(succeeded) \(parts.count)")
+        }
+
+        await loadDetails()
+        await loadCollection()
+    }
+
+    var isDownloading: Bool {
+        media.mediaInfo?.isDownloading ?? false
     }
 
     func loadRelatedContent() async {

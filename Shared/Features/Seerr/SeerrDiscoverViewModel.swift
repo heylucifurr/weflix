@@ -37,10 +37,6 @@ final class SeerrDiscoverViewModel {
         permissionService.hasPermission(.manageRequests, user: store.user)
     }
 
-    var shouldShowManageRequestsButton: Bool {
-        canManageRequests && pendingRequestsCount > 0
-    }
-
     func load() async {
         guard refreshGate.startInitialLoadIfNeeded() else { return }
         await fetch(preservingExistingContent: false)
@@ -61,8 +57,7 @@ final class SeerrDiscoverViewModel {
     }
 
     private func fetch(preservingExistingContent: Bool) async {
-        guard !isLoading else { return }
-        guard let baseURL else { return }
+        guard !isLoading, let baseURL else { return }
 
         isLoading = true
         errorMessage = nil
@@ -95,9 +90,8 @@ final class SeerrDiscoverViewModel {
         await loadRequestCount()
     }
 
-    func makePendingRequestsViewModel() -> SeerrPendingRequestsViewModel? {
-        guard baseURL != nil else { return nil }
-        return SeerrPendingRequestsViewModel(store: store)
+    var requestsBadgeCount: Int {
+        canManageRequests ? pendingRequestsCount : 0
     }
 
     private var baseURL: URL? {
