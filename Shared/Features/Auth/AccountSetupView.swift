@@ -19,8 +19,7 @@ struct AccountSetupView: View {
                         Button("common.actions.continue") {
                             Task { await flow.finish() }
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.brandPrimary)
+                        .actionButtonStyle(.primary)
                         .padding()
                     }
                 }
@@ -89,12 +88,14 @@ struct AddAnotherAccountView: View {
             Spacer()
             Image(systemName: "person.2.badge.plus")
                 .font(.system(size: 56))
-                .foregroundStyle(.brandPrimary)
+                .foregroundStyle(.textSecondary)
             Text("onboarding.addAnother.title")
-                .font(.largeTitle.bold())
+                .font(.heroTitle)
+                .foregroundStyle(.textPrimary)
                 .multilineTextAlignment(.center)
             Text("onboarding.addAnother.subtitle")
-                .foregroundStyle(.secondary)
+                .font(.bodyText)
+                .foregroundStyle(.textSecondary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 560)
             Button(action: onContinue) {
@@ -103,11 +104,17 @@ struct AddAnotherAccountView: View {
                     .frame(maxWidth: 420)
                     .padding(.vertical, 4)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(.brandPrimary)
+            .actionButtonStyle(.primary)
             .controlSize(.large)
-            Button("onboarding.addAnother.button", action: onAddAccount)
-                .controlSize(.large)
+            Button(action: onAddAccount) {
+                Text("onboarding.addAnother.button")
+                    .fontWeight(.semibold)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 420)
+                    .padding(.vertical, 4)
+            }
+            .actionButtonStyle(.secondary)
+            .controlSize(.large)
             Spacer()
         }
         .padding(32)

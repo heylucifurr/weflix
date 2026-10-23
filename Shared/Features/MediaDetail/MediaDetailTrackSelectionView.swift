@@ -1,107 +1,5 @@
 import SwiftUI
 
-struct MediaDetailTrackButtons: View {
-    @Bindable var viewModel: MediaDetailViewModel
-    var onSearchSubtitles: (() -> Void)?
-
-    var body: some View {
-        HStack(spacing: 12) {
-            if viewModel.showsVersionSelection {
-                Menu {
-                    MediaDetailVersionMenuItems(viewModel: viewModel)
-                } label: {
-                    Label(viewModel.selectedVersionShortLabel, systemImage: "film.stack")
-                }
-                .disabled(viewModel.isUpdatingTracks)
-                .help(Text("media.versions.title"))
-                .accessibilityLabel(Text("media.versions.title"))
-                .accessibilityValue(Text(viewModel.selectedVersionShortLabel))
-            }
-
-            if !viewModel.audioTracks.isEmpty {
-                Menu {
-                    audioTrackButtons
-                } label: {
-                    Label(
-                        viewModel.selectedAudioTrackTitle ?? String(localized: "player.settings.audio"),
-                        systemImage: "waveform",
-                    )
-                }
-                .disabled(viewModel.isUpdatingTracks)
-                .help(Text("player.settings.audio"))
-                .accessibilityLabel(
-                    Text(viewModel.selectedAudioTrackTitle ?? String(localized: "player.settings.audio")),
-                )
-            }
-
-            if !viewModel.subtitleTracks.isEmpty
-                || (onSearchSubtitles != nil && viewModel.canSearchSubtitles)
-            {
-                Menu {
-                    subtitleTrackButtons
-                } label: {
-                    Label(viewModel.selectedSubtitleTrackTitle, systemImage: "captions.bubble")
-                }
-                .disabled(viewModel.isUpdatingTracks)
-                .help(Text("player.settings.subtitles"))
-                .accessibilityLabel(Text(viewModel.selectedSubtitleTrackTitle))
-            }
-        }
-        .buttonStyle(.bordered)
-        .tint(.secondary)
-    }
-
-    private var audioTrackButtons: some View {
-        ForEach(viewModel.audioTracks, id: \.self) { track in
-            if let id = track.id {
-                Button {
-                    Task { await viewModel.selectAudioStream(id: id) }
-                } label: {
-                    trackLabel(track, isSelected: viewModel.selectedAudioStreamID == id)
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var subtitleTrackButtons: some View {
-        Button {
-            Task { await viewModel.selectSubtitleStream(id: nil) }
-        } label: {
-            trackLabel(
-                String(localized: "player.settings.subtitles.off"),
-                isSelected: viewModel.selectedSubtitleStreamID == nil,
-            )
-        }
-
-        ForEach(viewModel.subtitleTracks, id: \.self) { track in
-            if let id = track.id {
-                Button {
-                    Task { await viewModel.selectSubtitleStream(id: id) }
-                } label: {
-                    trackLabel(track, isSelected: viewModel.selectedSubtitleStreamID == id)
-                }
-            }
-        }
-
-        if let onSearchSubtitles, viewModel.canSearchSubtitles {
-            Divider()
-            Button(action: onSearchSubtitles) {
-                Label("subtitles.search.action", systemImage: "magnifyingglass")
-            }
-            .tint(.secondary)
-        }
-    }
-
-    private func trackLabel(_ track: MediaTrackMetadata, isSelected: Bool) -> some View {
-        trackLabel(track.displayTitle, isSelected: isSelected)
-    }
-
-    private func trackLabel(_ title: String, isSelected: Bool) -> some View {
-        Label(title, systemImage: isSelected ? "checkmark" : "circle")
-    }
-}
-
 struct MediaDetailVersionMenuItems: View {
     @Bindable var viewModel: MediaDetailViewModel
 
@@ -148,11 +46,23 @@ struct MediaDetailVersionMenuItems: View {
             .disabled(!version.isAvailable || version.id == nil)
         }
 
-        copiesSections
+        if viewModel.listsCopiesWithVersions {
+            MediaCopiesMenuItems(viewModel: viewModel)
+        }
     }
 
-    /// Copies on other servers or libraries open their own page; offline copies are greyed out.
-    private var copiesSections: some View {
+    /// "Automatic" carries the checkmark until a version is picked explicitly.
+    private func isChecked(_ version: MediaFileVersion) -> Bool {
+        guard viewModel.hasVersionPreference else { return false }
+        return viewModel.selectedVersionID.map { version.matchesVersionID($0) } ?? false
+    }
+}
+
+/// Copies on other servers or libraries open their own page; offline copies are greyed out.
+struct MediaCopiesMenuItems: View {
+    let viewModel: MediaDetailViewModel
+
+    var body: some View {
         ForEach(viewModel.copiesByServer, id: \.serverName) { group in
             Section(String(localized: "media.availableOn \(group.serverName)")) {
                 ForEach(group.copies) { copy in
@@ -172,12 +82,6 @@ struct MediaDetailVersionMenuItems: View {
                 }
             }
         }
-    }
-
-    /// "Automatic" carries the checkmark until a version is picked explicitly.
-    private func isChecked(_ version: MediaFileVersion) -> Bool {
-        guard viewModel.hasVersionPreference else { return false }
-        return viewModel.selectedVersionID.map { version.matchesVersionID($0) } ?? false
     }
 }
 
@@ -232,18 +136,7 @@ struct MediaDetailTrackMenuItems: View {
 
             if !viewModel.audioTracks.isEmpty {
                 Menu("player.settings.audio", systemImage: "waveform") {
-                    ForEach(viewModel.audioTracks, id: \.self) { track in
-                        if let id = track.id {
-                            Button {
-                                Task { await viewModel.selectAudioStream(id: id) }
-                            } label: {
-                                Label(
-                                    track.displayTitle,
-                                    systemImage: viewModel.selectedAudioStreamID == id ? "checkmark" : "circle",
-                                )
-                            }
-                        }
-                    }
+                    MediaDetailAudioMenuItems(viewModel: viewModel)
                 }
             }
 
@@ -251,61 +144,65 @@ struct MediaDetailTrackMenuItems: View {
                 || (onSearchSubtitles != nil && viewModel.canSearchSubtitles)
             {
                 Menu("player.settings.subtitles", systemImage: "captions.bubble") {
-                    Button {
-                        Task { await viewModel.selectSubtitleStream(id: nil) }
-                    } label: {
-                        Label(
-                            String(localized: "player.settings.subtitles.off"),
-                            systemImage: viewModel.selectedSubtitleStreamID == nil ? "checkmark" : "circle",
-                        )
-                    }
-
-                    ForEach(viewModel.subtitleTracks, id: \.self) { track in
-                        if let id = track.id {
-                            Button {
-                                Task { await viewModel.selectSubtitleStream(id: id) }
-                            } label: {
-                                Label(
-                                    track.displayTitle,
-                                    systemImage: viewModel.selectedSubtitleStreamID == id ? "checkmark" : "circle",
-                                )
-                            }
-                        }
-                    }
-
-                    if let onSearchSubtitles, viewModel.canSearchSubtitles {
-                        Divider()
-                        Button(action: onSearchSubtitles) {
-                            Label("subtitles.search.action", systemImage: "magnifyingglass")
-                        }
-                        .tint(.secondary)
-                    }
+                    MediaDetailSubtitleMenuItems(viewModel: viewModel, onSearchSubtitles: onSearchSubtitles)
                 }
             }
         }
     }
 }
 
-struct MediaDetailTrackSummary: View {
+struct MediaDetailAudioMenuItems: View {
     @Bindable var viewModel: MediaDetailViewModel
-    var spacing: CGFloat = 16
 
     var body: some View {
-        HStack(spacing: spacing) {
-            // Shown even for a single version, as file info; only the menu needs several.
-            if viewModel.selectedVersion != nil {
-                Label(viewModel.selectedVersionShortLabel, systemImage: "film.stack")
-            }
-            if let audioTitle = viewModel.selectedAudioTrackTitle {
-                Label(audioTitle, systemImage: "waveform")
-            }
-            if !viewModel.subtitleTracks.isEmpty {
-                Label(viewModel.selectedSubtitleTrackTitle, systemImage: "captions.bubble")
+        ForEach(viewModel.audioTracks, id: \.self) { track in
+            if let id = track.id {
+                Button {
+                    Task { await viewModel.selectAudioStream(id: id) }
+                } label: {
+                    Label(
+                        track.displayTitle,
+                        systemImage: viewModel.selectedAudioStreamID == id ? "checkmark" : "circle",
+                    )
+                }
             }
         }
-        .font(.footnote)
-        .foregroundStyle(.secondary)
-        .lineLimit(1)
-        .accessibilityElement(children: .combine)
+    }
+}
+
+struct MediaDetailSubtitleMenuItems: View {
+    @Bindable var viewModel: MediaDetailViewModel
+    var onSearchSubtitles: (() -> Void)?
+
+    var body: some View {
+        Button {
+            Task { await viewModel.selectSubtitleStream(id: nil) }
+        } label: {
+            Label(
+                String(localized: "player.settings.subtitles.off"),
+                systemImage: viewModel.selectedSubtitleStreamID == nil ? "checkmark" : "circle",
+            )
+        }
+
+        ForEach(viewModel.subtitleTracks, id: \.self) { track in
+            if let id = track.id {
+                Button {
+                    Task { await viewModel.selectSubtitleStream(id: id) }
+                } label: {
+                    Label(
+                        track.displayTitle,
+                        systemImage: viewModel.selectedSubtitleStreamID == id ? "checkmark" : "circle",
+                    )
+                }
+            }
+        }
+
+        if let onSearchSubtitles, viewModel.canSearchSubtitles {
+            Divider()
+            Button(action: onSearchSubtitles) {
+                Label("subtitles.search.action", systemImage: "magnifyingglass")
+            }
+            .tint(.secondary)
+        }
     }
 }

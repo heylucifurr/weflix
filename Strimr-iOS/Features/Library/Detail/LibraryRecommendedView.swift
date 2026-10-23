@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct LibraryRecommendedView: View {
+    @Environment(SettingsManager.self) private var settingsManager
     @Environment(MediaServices.self) private var mediaServices
     @Environment(\.scenePhase) private var scenePhase
     @State var viewModel: LibraryRecommendedViewModel
@@ -27,8 +28,7 @@ struct LibraryRecommendedView: View {
                 }
 
                 if viewModel.isLoading, !viewModel.hasContent {
-                    ProgressView("library.recommended.loading")
-                        .frame(maxWidth: .infinity)
+                    RailsSkeleton(showsLabels: settingsManager.interface.showsCardLabels)
                 }
 
                 if let errorMessage = viewModel.errorMessage {
@@ -39,8 +39,11 @@ struct LibraryRecommendedView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, LayoutMetrics.pageMargin)
             .padding(.vertical, 20)
+        }
+        .environment(\.reloadAfterMediaCardAction) { _ in
+            Task { await viewModel.refreshSilently() }
         }
         .task {
             await viewModel.load()
@@ -78,14 +81,14 @@ struct LibraryRecommendedView: View {
             MediaCarousel(
                 layout: .landscape,
                 items: hub.items,
-                showsLabels: true,
+                showsLabels: settingsManager.interface.showsCardLabels,
                 onSelectMedia: onSelectMedia,
             )
         } else {
             MediaCarousel(
                 layout: .portrait,
                 items: hub.items,
-                showsLabels: true,
+                showsLabels: settingsManager.interface.showsCardLabels,
                 onSelectMedia: onSelectMedia,
             )
         }

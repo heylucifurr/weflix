@@ -16,6 +16,16 @@ struct AppSettingsTests {
         #expect(try decode(#"{"interface":{"themeMusicVolume":"medium"}}"#).interface.themeMusicVolume == .medium)
     }
 
+    @Test func `title logo is shown unless turned off`() throws {
+        #expect(try decode(#"{"interface":{"displayPlaylists":false}}"#).interface.showsTitleLogo)
+        #expect(try !decode(#"{"interface":{"showsTitleLogo":false}}"#).interface.showsTitleLogo)
+    }
+
+    @Test func `card labels are shown unless turned off`() throws {
+        #expect(try decode(#"{"interface":{"displayPlaylists":false}}"#).interface.showsCardLabels)
+        #expect(try !decode(#"{"interface":{"showsCardLabels":false}}"#).interface.showsCardLabels)
+    }
+
     @Test func `corrupt library browse preferences keep other settings`() throws {
         let settings = try decode(#"""
         {"interface":{"displayPlaylists":false,"libraryBrowseByKey":{"plex|server|account|1":{"plex":{"filters":42}}}}}

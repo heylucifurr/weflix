@@ -7,11 +7,11 @@ struct DownloadStatusBadge: View {
     var body: some View {
         if let state = downloadManager.badgeState(for: media) {
             content(for: state)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.white)
+                .font(.badge)
+                .foregroundStyle(.textPrimary)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 4)
-                .background(.black.opacity(0.65), in: Capsule(style: .continuous))
+                .background(.badgeBackground, in: Capsule(style: .continuous))
                 .padding(8)
                 // Keeps the badge above the resume progress bar drawn along the bottom edge.
                 .padding(.bottom, 10)
@@ -83,8 +83,8 @@ struct OfflineBanner: View {
                 banner == .offline ? "offline.banner.offline" : "offline.banner.serverUnreachable",
                 systemImage: banner == .offline ? "wifi.slash" : "exclamationmark.icloud",
             )
-            .font(.footnote.weight(.semibold))
-            .foregroundStyle(.white)
+            .font(.facts.weight(.semibold))
+            .foregroundStyle(.textPrimary)
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
             .frame(maxWidth: .infinity)
@@ -105,8 +105,8 @@ struct OfflineStatusPill: View {
                 systemImage: banner == .offline ? "wifi.slash" : "exclamationmark.icloud",
             )
             .labelStyle(.titleAndIcon)
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(.white)
+            .font(.cardMetadata.weight(.semibold))
+            .foregroundStyle(.textPrimary)
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
             .background(Color.orange.opacity(0.9), in: Capsule(style: .continuous))

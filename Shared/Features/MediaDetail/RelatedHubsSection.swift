@@ -19,7 +19,8 @@ struct RelatedHubsSection: View {
 
                 relatedContent
             }
-            .padding(.horizontal, relatedSectionHorizontalPadding)
+            .padding(.horizontal, LayoutMetrics.detailSectionMargin)
+            .environment(\.railPageMargin, LayoutMetrics.detailSectionMargin)
             .padding(.bottom, 32)
         }
         .textCase(nil)
@@ -50,18 +51,18 @@ struct RelatedHubsSection: View {
         if let errorMessage = viewModel.relatedHubsErrorMessage {
             Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
                 .foregroundStyle(.red)
-                .font(.subheadline)
+                .font(.facts)
         } else if viewModel.isLoadingRelatedHubs, viewModel.relatedHubs.isEmpty {
             HStack(spacing: 8) {
                 ProgressView()
                     .controlSize(.small)
                 Text("media.detail.loadingRelated")
-                    .font(.subheadline)
+                    .font(.facts)
                     .foregroundStyle(.secondary)
             }
         } else if viewModel.relatedHubs.isEmpty {
             Text("media.detail.noRelated")
-                .font(.subheadline)
+                .font(.facts)
                 .foregroundStyle(.secondary)
         } else {
             VStack(alignment: .leading, spacing: 20) {
@@ -100,14 +101,4 @@ struct RelatedHubsSection: View {
             return nil
         #endif
     }
-}
-
-private var relatedSectionHorizontalPadding: CGFloat {
-    #if os(macOS)
-        28
-    #elseif os(iOS)
-        16
-    #else
-        0
-    #endif
 }

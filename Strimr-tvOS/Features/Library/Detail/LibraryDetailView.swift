@@ -133,8 +133,8 @@ struct LibraryDetailView: View {
         .padding(.leading, 48)
         .padding(.trailing, 12)
         .background(alignment: .leading) {
-            Rectangle()
-                .fill(.regularMaterial)
+            Color.clear
+                .glassSurface(in: Rectangle())
                 .frame(width: sidebarBackgroundWidth)
                 .opacity(isSidebarFocused ? 1 : 0)
                 .ignoresSafeArea(edges: [.leading, .top, .bottom])
@@ -163,7 +163,8 @@ struct LibraryDetailView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .foregroundStyle(selectedTab == tab ? .brandPrimary : .secondary)
+            // Hierarchical so the system focus, which turns the button white, inverts it.
+            .foregroundStyle(selectedTab == tab ? HierarchicalShapeStyle.primary : .secondary)
         }
         .focused($focusedSidebarItem, equals: tab)
         .buttonStyle(.plain)

@@ -119,6 +119,7 @@
 				Features/Auth/AccountSetupView.swift,
 				Features/Auth/MigrationFailedView.swift,
 				Features/Auth/PinPollingBackoff.swift,
+				Features/Auth/ProfileSelection/PINEntryView.swift,
 				Features/Auth/ProfileSelection/ProfilePickerComponents.swift,
 				Features/Auth/ProfileSelection/ProfileSwitcherViewModel.swift,
 				Features/Auth/ProfileSelection/ProfileTint.swift,
@@ -149,6 +150,7 @@
 				Features/Library/LibraryDetailTabPicker.swift,
 				Features/Library/LibraryPlaylistsViewModel.swift,
 				Features/Library/LibraryRecommendedViewModel.swift,
+				Features/Library/LibraryTileGrid.swift,
 				Features/Library/LibraryViewModel.swift,
 				Features/LiveTV/LiveTVServersView.swift,
 				Features/LiveTV/LiveTVView.swift,
@@ -160,6 +162,8 @@
 				Features/MediaDetail/MediaDetailTrackSelectionView.swift,
 				Features/MediaDetail/MediaDetailViewModel.swift,
 				Features/MediaDetail/MediaFileInfoView.swift,
+				Features/MediaDetail/MediaQuickActions.swift,
+				Features/MediaDetail/PlayProgressIcon.swift,
 				Features/MediaDetail/RelatedHubsSection.swift,
 				Features/MediaDetail/ThemeMusicPlayer.swift,
 				Features/PersonDetail/PersonDetailView.swift,
@@ -169,6 +173,7 @@
 				Features/Player/Controls/PlayerBadge.swift,
 				Features/Player/Controls/PlayerChapterTrayView.swift,
 				Features/Player/Controls/PlayerChapterViews.swift,
+				Features/Player/Controls/PlayerControlsBackground.swift,
 				Features/Player/Controls/PlayerInfoPanelView.swift,
 				Features/Player/Controls/PlayerMediaInfoView.swift,
 				Features/Player/Controls/PlayerQueueView.swift,
@@ -185,6 +190,7 @@
 				Features/Player/PlaybackOffset.swift,
 				Features/Player/PlaybackSettingsTrack.swift,
 				Features/Player/PlaybackSpeedOption.swift,
+				Features/Player/PlayerPromptCard.swift,
 				Features/Player/PlayerViewModel.swift,
 				Features/Player/SleepTimer.swift,
 				Features/Player/SleepTimerPromptOverlay.swift,
@@ -239,6 +245,7 @@
 				Models/LibraryPreferences.swift,
 				Models/MediaDisplayItem.swift,
 				"Models/MediaDisplayItem+List.swift",
+				Models/MediaFactsFormatter.swift,
 				Models/MediaFileInfo.swift,
 				"Models/MediaFileVersion+Labels.swift",
 				Models/MediaItem.swift,
@@ -258,6 +265,7 @@
 				Models/Seerr/SeerrAuthRequests.swift,
 				Models/Seerr/SeerrCollection.swift,
 				Models/Seerr/SeerrMedia.swift,
+				Models/Seerr/SeerrMediaFacts.swift,
 				Models/Seerr/SeerrPaginatedResponse.swift,
 				Models/Seerr/SeerrQuota.swift,
 				Models/Seerr/SeerrRatings.swift,
@@ -338,42 +346,50 @@
 				Store/SettingsManager.swift,
 				Store/TrackSelectionMatcher.swift,
 				Store/TrackSelectionStore.swift,
+				Views/FilterChip.swift,
 				Views/FolderCard.swift,
 				Views/FolderListRow.swift,
 				Views/IsolatedSheetPresentationHost.swift,
 				Views/Media/ArtworkResourceView.swift,
 				Views/Media/Card/LandscapeMediaCard.swift,
 				Views/Media/Card/MediaCard.swift,
+				Views/Media/Card/MediaCardContextMenu.swift,
 				Views/Media/Card/MediaListRow.swift,
 				Views/Media/Card/PortraitMediaCard.swift,
 				Views/Media/EpisodeArtworkView.swift,
 				Views/Media/MediaBackdropGradient.swift,
 				Views/Media/MediaCarousel.swift,
+				Views/Media/MediaFactsLine.swift,
 				Views/Media/MediaHubSection.swift,
 				Views/Media/MediaImageView.swift,
 				Views/Media/MediaImageViewModel.swift,
 				Views/Media/MediaRatingLabel.swift,
 				Views/Media/PosterGrid.swift,
+				Views/Media/SkeletonViews.swift,
+				Views/Media/TitleLogoView.swift,
 				Views/Media/WatchStatusBadge.swift,
 				Views/ProfileInitialsAvatar.swift,
 				Views/Seerr/SeerrAvailabilityBadgeView.swift,
 				Views/Seerr/SeerrCastSection.swift,
 				Views/Seerr/SeerrCollectionSection.swift,
-				Views/Seerr/SeerrEpisodeCardView.swift,
 				Views/Seerr/SeerrMediaArtworkView.swift,
 				Views/Seerr/SeerrMediaCard.swift,
 				Views/Seerr/SeerrMediaCarousel.swift,
-				Views/Seerr/SeerrMediaSection.swift,
-				Views/Seerr/SeerrRatingsRow.swift,
+				Views/Seerr/SeerrRelatedSection.swift,
 				Views/Seerr/SeerrRequestCardView.swift,
 				Views/Seerr/SeerrRequestsView.swift,
-				Views/Seerr/SeerrRelatedSection.swift,
 				Views/Seerr/SeerrSearchCard.swift,
 				Views/Seerr/SeerrSeasonAvailabilityBadgeView.swift,
 				Views/ServerScopedView.swift,
 				Views/TaskPresentation.swift,
-				Views/Toast/ToastOverlay.swift,
-				Views/TVPINPadView.swift,
+				Views/Theme/ActionButtonStyle.swift,
+				Views/Theme/CardFocusStyle.swift,
+				Views/Theme/ChipButtonStyle.swift,
+				Views/Theme/Colors.swift,
+				Views/Theme/GlassSurface.swift,
+				Views/Theme/Metrics.swift,
+				Views/Theme/Motion.swift,
+				Views/Theme/Typography.swift,
 			);
 			target = E9C448F22EF3034900D2895B /* Strimr-tvOS */;
 		};
@@ -1098,6 +1114,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = Strimr;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Strimr needs local network access to connect to your media server.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -1148,6 +1165,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = Strimr;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Strimr needs local network access to connect to your media server.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -1238,6 +1256,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = Strimr;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Strimr needs local network access to connect to your media server.";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UIUserInterfaceStyle = Automatic;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1275,6 +1294,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = Strimr;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Strimr needs local network access to connect to your media server.";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UIUserInterfaceStyle = Automatic;
 				LD_RUNPATH_SEARCH_PATHS = (

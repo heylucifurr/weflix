@@ -9,7 +9,7 @@ struct SeerrMediaRequestView: View {
 
     var body: some View {
         content
-            .navigationTitle(LocalizedStringKey(viewModel.sheetTitleKey))
+            .taskModalTitle(LocalizedStringKey(viewModel.sheetTitleKey))
             .alert("integrations.seerr.error.title", isPresented: $viewModel.isShowingError) {
                 Button("common.actions.done") {}
             } message: {
@@ -31,6 +31,26 @@ struct SeerrMediaRequestView: View {
             requestTypeSelection
         } else {
             requestForm
+                .taskModalActions {
+                    Button(action: submitRequest) {
+                        HStack(spacing: 10) {
+                            if viewModel.isSubmitting {
+                                ProgressView()
+                                    .progressViewStyle(.circular)
+                            }
+                            Text(LocalizedStringKey(viewModel.submitButtonKey))
+                        }
+                    }
+                    .disabled(!viewModel.canSubmit || viewModel.isSubmitting)
+                } actions: {
+                    if viewModel.isEditing {
+                        Button("seerr.request.action.cancel", role: .destructive) {
+                            Task {
+                                await viewModel.cancelRequest()
+                            }
+                        }
+                    }
+                }
         }
     }
 
@@ -43,9 +63,9 @@ struct SeerrMediaRequestView: View {
                     } label: {
                         VStack(alignment: .leading, spacing: 6) {
                             Text(LocalizedStringKey(option.titleKey))
-                                .font(.headline)
+                                .font(.rowTitle)
                             Text(LocalizedStringKey(option.subtitleKey))
-                                .font(.subheadline)
+                                .font(.facts)
                                 .foregroundStyle(.secondary)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -73,7 +93,8 @@ struct SeerrMediaRequestView: View {
             if viewModel.isMovie, !viewModel.requiresAdvancedConfiguration {
                 Section {
                     Text("seerr.request.movie.confirmation")
-                        .foregroundStyle(.secondary)
+                        .font(.bodyText)
+                        .foregroundStyle(.textSecondary)
                 }
             }
 
@@ -83,34 +104,6 @@ struct SeerrMediaRequestView: View {
 
             if viewModel.isTV {
                 seasonSelectionSection
-            }
-
-            Section {
-                Button(action: submitRequest) {
-                    HStack(spacing: 10) {
-                        if viewModel.isSubmitting {
-                            ProgressView()
-                                .progressViewStyle(.circular)
-                        }
-                        Text(LocalizedStringKey(viewModel.submitButtonKey))
-                            .font(.headline)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .center)
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .tint(.brandPrimary)
-                .disabled(!viewModel.canSubmit || viewModel.isSubmitting)
-            }
-
-            if viewModel.isEditing {
-                Section {
-                    Button("seerr.request.action.cancel", role: .destructive) {
-                        Task {
-                            await viewModel.cancelRequest()
-                        }
-                    }
-                }
             }
         }
         .listStyle(.automatic)
@@ -147,7 +140,7 @@ struct SeerrMediaRequestView: View {
                         Text("seerr.request.options.rootFolder")
                         Spacer()
                         Text(rootFolder)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.textSecondary)
                     }
                 }
             }
@@ -164,7 +157,7 @@ struct SeerrMediaRequestView: View {
                         Text("seerr.request.options.profile")
                         Spacer()
                         Text(profileName)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.textSecondary)
                     }
                 }
             }
@@ -175,7 +168,7 @@ struct SeerrMediaRequestView: View {
         Section("seerr.request.seasons.title") {
             if viewModel.seasons.isEmpty {
                 Text("seerr.request.seasons.empty")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.textSecondary)
             } else {
                 ForEach(viewModel.seasons, id: \.id) { season in
                     if let seasonNumber = season.seasonNumber {
@@ -183,9 +176,9 @@ struct SeerrMediaRequestView: View {
                             HStack(alignment: .center, spacing: 12) {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(viewModel.seasonTitle(for: season))
-                                        .font(.headline)
+                                        .font(.rowTitle)
                                     Text(seasonEpisodeCountText(season))
-                                        .font(.caption)
+                                        .font(.cardMetadata)
                                         .foregroundStyle(.secondary)
                                 }
                                 Spacer()
@@ -205,8 +198,8 @@ struct SeerrMediaRequestView: View {
 
             if let messageKey = viewModel.partialRequestsDisabledMessageKey {
                 Text(LocalizedStringKey(messageKey))
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .font(.facts)
+                    .foregroundStyle(.textSecondary)
             }
         }
     }

@@ -92,32 +92,15 @@ struct SearchView: View {
 
     private func filterPills() -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 32) {
+            HStack(spacing: LayoutMetrics.chipSpacing) {
                 ForEach(SearchFilter.allCases) { filter in
-                    let isSelected = viewModel.activeFilters.contains(filter)
-                    Button {
+                    FilterChip(
+                        title: filter.title,
+                        systemImage: filter.systemImageName,
+                        isSelected: viewModel.activeFilters.contains(filter),
+                    ) {
                         viewModel.toggleFilter(filter)
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: filter.systemImageName)
-                                .font(.subheadline)
-                            Text(filter.title)
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(
-                            Capsule(style: .continuous)
-                                .fill(isSelected ? Color.brandPrimary.opacity(0.18) : Color.gray.opacity(0.12)),
-                        )
-                        .overlay {
-                            Capsule(style: .continuous)
-                                .stroke(isSelected ? Color.brandPrimary : Color.gray.opacity(0.25), lineWidth: 1)
-                        }
-                        .foregroundStyle(isSelected ? Color.brandPrimary : Color.primary)
                     }
-                    .buttonStyle(.plain)
                 }
             }
             .padding(.vertical, 32)

@@ -21,11 +21,13 @@ struct SignInView: View {
 
                 Text("signIn.title")
                     .multilineTextAlignment(.center)
-                    .font(.largeTitle.bold())
+                    .font(.heroTitle)
+                    .foregroundStyle(.textPrimary)
 
                 Text("signIn.subtitle")
+                    .font(.bodyText)
                     .multilineTextAlignment(.center)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.textSecondary)
             }
 
             Button {
@@ -42,25 +44,19 @@ struct SignInView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 4)
             }
-            .buttonStyle(.borderedProminent)
-            .buttonBorderShape(.roundedRectangle(radius: 12))
-            .controlSize(.large)
-            .tint(.brandPrimary)
+            .actionButtonStyle(.primary)
             .frame(maxWidth: 520)
             .disabled(viewModel.isAuthenticating)
 
             if viewModel.isAuthenticating {
                 Button("signIn.button.cancel") { viewModel.cancelSignIn() }
-                    .padding(.top, 4)
+                    .actionButtonStyle(.secondary)
             }
 
             if let errorMessage = viewModel.errorMessage {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(errorMessage)
-                        .foregroundStyle(.red)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.top, 12)
+                Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
+                    .font(.facts)
+                    .foregroundStyle(.red)
             }
 
             Spacer()

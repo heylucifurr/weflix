@@ -5,7 +5,11 @@ struct MediaCard: View {
     @Environment(MediaServices.self) private var scopedServices: MediaServices?
     #if os(tvOS)
         @Environment(MediaFocusModel.self) private var focusModel
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
         @FocusState private var isFocused: Bool
+    #elseif os(macOS)
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
+        @State private var isFocused = false
     #endif
 
     let size: CGSize
@@ -19,27 +23,14 @@ struct MediaCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: labelSpacing) {
+        VStack(alignment: .leading, spacing: LayoutMetrics.cardLabelSpacing) {
             artwork
-            #if os(tvOS)
-                .scaleEffect(isFocused ? 1.12 : 1)
-                .animation(.easeOut(duration: 0.15), value: isFocused)
+            #if os(tvOS) || os(macOS)
+                .cardFocusStyle(isFocused: isFocused)
             #endif
 
             if showsLabels {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(media.primaryLabel)
-                        .font(primaryLabelFont)
-                        .lineLimit(1)
-                    Text(media.secondaryLabel ?? "")
-                        .font(secondaryLabelFont)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                    Text(media.tertiaryLabel ?? "")
-                        .font(secondaryLabelFont)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
+                labels
             }
         }
         .frame(width: size.width, alignment: .leading)
@@ -49,12 +40,16 @@ struct MediaCard: View {
             .focused($isFocused)
             .onChange(of: isFocused) { _, focused in
                 if focused, let playableItem = media.playableItem {
-                    focusModel.focusedMedia = playableItem
+                    focusModel.focus(playableItem)
                 }
             }
             .onPlayPauseCommand(perform: onTap)
+        #elseif os(macOS)
+            .contentShape(Rectangle())
+            .onHover { isFocused = $0 }
         #endif
             .onTapGesture(perform: onTap)
+            .mediaCardContextMenu(media)
     }
 
     private var artwork: some View {
@@ -71,36 +66,72 @@ struct MediaCard: View {
         .downloadStatusOverlay(media)
         .overlay(alignment: .bottomLeading) {
             if let progress {
-                ProgressView(value: progress)
-                    .progressViewStyle(.linear)
-                    .tint(.brandPrimary)
+                CardProgressBar(progress: progress)
                     .padding(.horizontal, 10)
                     .padding(.bottom, 10)
             }
         }
     }
 
-    private var labelSpacing: CGFloat {
-        #if os(tvOS)
-            20
-        #else
-            8
+    private var labels: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(media.primaryLabel)
+                .font(.cardTitle)
+                .foregroundStyle(.textPrimary.opacity(titleOpacity))
+                .lineLimit(1)
+            Text(secondaryLabel ?? "")
+                .font(.cardMetadata)
+                .foregroundStyle(remainingTimeLine == .secondary ? .textTertiary : .textSecondary)
+                .opacity(metadataOpacity)
+                .lineLimit(1)
+            Text(tertiaryLabel ?? "")
+                .font(.cardMetadata)
+                .foregroundStyle(remainingTimeLine == .tertiary ? .textTertiary : .textSecondary)
+                .opacity(metadataOpacity)
+                .lineLimit(1)
+        }
+        #if os(tvOS) || os(macOS)
+        // Follows the bottom edge of the focused artwork so the lifted card does not cover its caption.
+        .offset(y: isFocused && !reduceMotion ? size.height * (CardFocusStyle.focusedScale - 1) / 2 : 0)
+        .animation(Motion.animation(Motion.focusScale, reduceMotion: reduceMotion), value: isFocused)
         #endif
     }
 
-    private var primaryLabelFont: Font {
+    private enum CaptionLine { case secondary, tertiary }
+
+    private var remainingTimeText: String? {
+        media.playableItem?.remainingTimeText
+    }
+
+    /// In-progress cards show the time left: after the episode number for episodes, in place of the year otherwise.
+    private var remainingTimeLine: CaptionLine? {
+        guard remainingTimeText != nil else { return nil }
+        return media.playableItem?.type == .episode ? .tertiary : .secondary
+    }
+
+    private var secondaryLabel: String? {
+        remainingTimeLine == .secondary ? remainingTimeText : media.secondaryLabel
+    }
+
+    private var tertiaryLabel: String? {
+        guard remainingTimeLine == .tertiary else { return media.tertiaryLabel }
+        return [media.tertiaryLabel, remainingTimeText].compactMap(\.self).joined(separator: " · ")
+    }
+
+    private var titleOpacity: Double {
         #if os(tvOS)
-            size.width < 180 ? .footnote : .subheadline
+            isFocused ? 1 : 0.45
         #else
-            .subheadline
+            1
         #endif
     }
 
-    private var secondaryLabelFont: Font {
+    /// Relative to `textSecondary`, so unfocused metadata lands at about a third of full white on tvOS.
+    private var metadataOpacity: Double {
         #if os(tvOS)
-            size.width < 180 ? .caption2 : .footnote
+            isFocused ? 1 : 0.32 / 0.65
         #else
-            .footnote
+            1
         #endif
     }
 }
@@ -142,5 +173,24 @@ struct ItemArtworkView: View {
             Rectangle()
                 .fill(.gray.opacity(0.15))
         }
+    }
+}
+
+struct CardProgressBar: View {
+    let progress: Double
+
+    var body: some View {
+        Capsule(style: .continuous)
+            .fill(.progressTrack)
+            .frame(height: 4)
+            .overlay(alignment: .leading) {
+                GeometryReader { proxy in
+                    Capsule(style: .continuous)
+                        .fill(.progressFill)
+                        .frame(width: proxy.size.width * min(max(progress, 0), 1))
+                }
+            }
+            .accessibilityElement()
+            .accessibilityValue(Text(progress, format: .percent.precision(.fractionLength(0))))
     }
 }

@@ -21,6 +21,7 @@ struct MainTabView: View {
     var body: some View {
         tabView
             .environmentObject(coordinator)
+            .mediaCardActions(registry: registry, presenter: coordinator, showMedia: coordinator.showMediaDetail)
             .task {
                 sharePlayCoordinator.configurePlaybackPresenter(coordinator)
                 try? await libraryStore.loadLibraries()
@@ -165,11 +166,13 @@ struct MainTabView: View {
                 viewModel: SeerrDiscoverViewModel(store: seerrStore),
                 searchViewModel: SeerrSearchViewModel(store: seerrStore),
                 onSelectMedia: coordinator.showSeerrMediaDetail,
+                onShowRequests: coordinator.showSeerrRequests,
             )
             .unavailableWhenOffline()
             .navigationDestination(for: SeerrMedia.self) { media in
                 SeerrMediaDetailView(
                     viewModel: SeerrMediaDetailViewModel(media: media, store: seerrStore),
+                    onSelectMedia: coordinator.showSeerrMediaDetail,
                 )
             }
             .navigationDestination(for: SeerrRequestsRoute.self) { _ in

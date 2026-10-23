@@ -43,7 +43,11 @@ struct PlayerControlsView: View {
     var settingsControl: PlayerSettingsControl?
     var showsSubtitleOffsetIndicator = false
     var settingsFocusGeneration: Int
+    var isShowingPanel: Bool
     @FocusState private var focusedControl: FocusTarget?
+    /// Focus leaving a side panel falls on the nearest control, the full-width timeline, where a stray left or right
+    /// press seeks. It stays out of reach until a button has taken the focus back.
+    @State private var isTimelineFocusSuspended = false
     private var playbackBadges: [PlayerControlBadge] {
         var badges: [PlayerControlBadge] = []
 
@@ -76,28 +80,20 @@ struct PlayerControlsView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     if let title = media?.primaryLabel {
                         Text(title)
-                            .font(.title2.weight(.semibold))
-                            .foregroundStyle(.white)
+                            .font(.sectionTitle)
+                            .foregroundStyle(.textPrimary)
                             .lineLimit(2)
                     }
 
                     if let subtitle = media?.tertiaryLabel {
                         Text(subtitle)
-                            .font(.callout)
-                            .foregroundStyle(.white.opacity(0.8))
+                            .font(.facts)
+                            .foregroundStyle(.textSecondary)
                             .lineLimit(2)
                     }
 
                     if isSharePlay {
-                        Text("sharePlay.badge")
-                            .font(.caption.weight(.semibold))
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(
-                                Capsule(style: .continuous)
-                                    .fill(Color.white.opacity(0.15)),
-                            )
-                            .foregroundStyle(.white.opacity(0.9))
+                        PlayerBadge(String(localized: "sharePlay.badge"))
                     }
                 }
 
@@ -108,9 +104,9 @@ struct PlayerControlsView: View {
                 if showsClock {
                     TimelineView(.periodic(from: .now, by: 30)) { context in
                         Text(context.date.formatted(date: .omitted, time: .shortened))
-                            .font(.title3.monospacedDigit())
-                            .foregroundStyle(.white.opacity(0.9))
-                            .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+                            .font(.facts.monospacedDigit())
+                            .foregroundStyle(.textPrimary)
+                            .videoTextShadow()
                     }
                 }
             }
@@ -135,7 +131,7 @@ struct PlayerControlsView: View {
                     }
                     Spacer()
                     Button("livetv.player.goLive", systemImage: "dot.radiowaves.left.and.right", action: onGoLive)
-                        .buttonStyle(.borderedProminent)
+                        .actionButtonStyle(.primary)
                         .disabled(behindLiveSeconds < 2)
                 }
             } else {
@@ -151,6 +147,7 @@ struct PlayerControlsView: View {
                     scrubPreview: scrubPreview,
                     onEditingChanged: onScrubbingChanged,
                 )
+                .disabled(isTimelineFocusSuspended)
             }
 
             ZStack {
@@ -249,14 +246,23 @@ struct PlayerControlsView: View {
         .onAppear {
             focusedControl = .playPause
         }
+        .onChange(of: isShowingPanel, initial: true) { _, isShowing in
+            if isShowing {
+                isTimelineFocusSuspended = true
+            }
+        }
+        .onChange(of: focusedControl) { _, control in
+            guard let control, !isShowingPanel, isTimelineFocusSuspended else { return }
+            isTimelineFocusSuspended = false
+            // The system picks its own control once the panel is gone, after the restore below has already run.
+            if let returningTarget, control != returningTarget {
+                focusedControl = returningTarget
+            }
+        }
         .onChange(of: settingsFocusGeneration) { _, _ in
             DispatchQueue.main.async {
-                switch settingsControl {
-                case .audio: focusedControl = .audio
-                case .subtitle: focusedControl = .subtitle
-                case .speed: focusedControl = .speed
-                case .settings: focusedControl = .settings
-                case nil: break
+                if let returningTarget {
+                    focusedControl = returningTarget
                 }
             }
         }
@@ -266,6 +272,16 @@ struct PlayerControlsView: View {
             } else {
                 onUserInteraction()
             }
+        }
+    }
+
+    private var returningTarget: FocusTarget? {
+        switch settingsControl {
+        case .audio: .audio
+        case .subtitle: .subtitle
+        case .speed: .speed
+        case .settings: .settings
+        case nil: nil
         }
     }
 
@@ -325,34 +341,4 @@ enum PlayerSettingsControl {
 private enum FocusTarget: Hashable {
     case audio, subtitle, speed, settings
     case playPause
-}
-
-private struct PlayerControlsBackground: View {
-    var body: some View {
-        VStack(spacing: 0) {
-            LinearGradient(
-                colors: [
-                    .black.opacity(0.55),
-                    .clear,
-                ],
-                startPoint: .top,
-                endPoint: .bottom,
-            )
-            .frame(height: 200)
-
-            Spacer()
-
-            LinearGradient(
-                colors: [
-                    .clear,
-                    .black.opacity(0.7),
-                ],
-                startPoint: .top,
-                endPoint: .bottom,
-            )
-            .frame(height: 280)
-        }
-        .ignoresSafeArea()
-        .allowsHitTesting(false)
-    }
 }

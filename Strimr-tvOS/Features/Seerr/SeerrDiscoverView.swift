@@ -4,6 +4,7 @@ import SwiftUI
 struct SeerrDiscoverView: View {
     @EnvironmentObject private var coordinator: MainCoordinator
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(SettingsManager.self) private var settingsManager
     @Environment(SeerrFocusModel.self) private var focusModel
     @Environment(SeerrStore.self) private var seerrStore
     @State var viewModel: SeerrDiscoverViewModel
@@ -26,15 +27,12 @@ struct SeerrDiscoverView: View {
                     ZStack(alignment: .bottom) {
                         ZStack(alignment: .topLeading) {
                             SeerrHeroBackgroundView(media: focusModel.focusedMedia ?? heroMedia)
-                            VStack(alignment: .leading, spacing: 20) {
-                                SeerrHeroContentView(media: focusModel.focusedMedia ?? heroMedia)
-                                heroActions
-                            }
-                            .frame(
-                                maxWidth: proxy.size.width * 0.60,
-                                maxHeight: .infinity,
-                                alignment: .topLeading,
-                            )
+                            SeerrHeroContentView(media: focusModel.focusedMedia ?? heroMedia)
+                                .frame(
+                                    maxWidth: proxy.size.width * 0.60,
+                                    maxHeight: .infinity,
+                                    alignment: .topLeading,
+                                )
                         }
 
                         discoverContent
@@ -72,8 +70,7 @@ struct SeerrDiscoverView: View {
                 Label("tabs.search", systemImage: "magnifyingglass")
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(.primary)
+            .actionButtonStyle(.primary)
 
             Button {
                 coordinator.showSeerrRequests()
@@ -86,93 +83,83 @@ struct SeerrDiscoverView: View {
                 )
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .buttonStyle(.bordered)
-            .tint(.secondary)
+            .actionButtonStyle(.secondary)
         }
         .frame(maxWidth: 720, alignment: .leading)
+        // Full width so moving up from the right side of a rail still lands on an action, not on the tab bar.
+        .frame(maxWidth: .infinity, alignment: .leading)
         .focusSection()
     }
 
     private var discoverContent: some View {
+        // The actions lead the rails inside their scroll view, as on the detail page: moving up from any rail then
+        // stays in one focus flow and scrolls back to the first rail's title on the way.
         ScrollView {
             VStack(alignment: .leading, spacing: 32) {
-                if !viewModel.trending.isEmpty {
-                    SeerrMediaSection(title: "integrations.seerr.discover.trending") {
-                        SeerrMediaCarousel(
-                            items: viewModel.trending,
-                            showsLabels: true,
-                            onSelectMedia: onSelectMedia,
-                        )
-                    }
-                }
-
-                if !viewModel.popularMovies.isEmpty {
-                    SeerrMediaSection(title: "integrations.seerr.discover.popularMovies") {
-                        SeerrMediaCarousel(
-                            items: viewModel.popularMovies,
-                            showsLabels: true,
-                            onSelectMedia: onSelectMedia,
-                        )
-                    }
-                }
-
-                if !viewModel.upcomingMovies.isEmpty {
-                    SeerrMediaSection(title: "integrations.seerr.discover.upcomingMovies") {
-                        SeerrMediaCarousel(
-                            items: viewModel.upcomingMovies,
-                            showsLabels: true,
-                            onSelectMedia: onSelectMedia,
-                        )
-                    }
-                }
-
-                if !viewModel.popularTV.isEmpty {
-                    SeerrMediaSection(title: "integrations.seerr.discover.popularTV") {
-                        SeerrMediaCarousel(
-                            items: viewModel.popularTV,
-                            showsLabels: true,
-                            onSelectMedia: onSelectMedia,
-                        )
-                    }
-                }
-
-                if !viewModel.upcomingTV.isEmpty {
-                    SeerrMediaSection(title: "integrations.seerr.discover.upcomingTV") {
-                        SeerrMediaCarousel(
-                            items: viewModel.upcomingTV,
-                            showsLabels: true,
-                            onSelectMedia: onSelectMedia,
-                        )
-                    }
-                }
-
-                if viewModel.isLoading, !viewModel.hasContent {
-                    ProgressView("integrations.seerr.discover.loading")
-                        .frame(maxWidth: .infinity)
-                }
-
-                if let errorMessage = viewModel.errorMessage {
-                    Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.red)
-                } else if !viewModel.hasContent, !viewModel.isLoading {
-                    Text("common.empty.nothingToShow")
-                        .foregroundStyle(.secondary)
-                }
+                heroActions
+                railsContent
             }
-            .padding(.trailing, 24)
+            .padding(.top, 16)
+            .padding(.trailing, LayoutMetrics.pageMargin)
         }
     }
 
+    @ViewBuilder
+    private var railsContent: some View {
+        rail(String(localized: "integrations.seerr.discover.trending"), items: viewModel.trending)
+        rail(String(localized: "integrations.seerr.discover.popularMovies"), items: viewModel.popularMovies)
+        rail(String(localized: "integrations.seerr.discover.upcomingMovies"), items: viewModel.upcomingMovies)
+        rail(String(localized: "integrations.seerr.discover.popularTV"), items: viewModel.popularTV)
+        rail(String(localized: "integrations.seerr.discover.upcomingTV"), items: viewModel.upcomingTV)
+
+        if viewModel.isLoading, !viewModel.hasContent {
+            RailsSkeleton(showsLabels: settingsManager.interface.showsCardLabels)
+        }
+
+        if let errorMessage = viewModel.errorMessage {
+            Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
+                .foregroundStyle(.red)
+        } else if !viewModel.hasContent, !viewModel.isLoading {
+            Text("common.empty.nothingToShow")
+                .foregroundStyle(.textSecondary)
+        }
+    }
+
+    @ViewBuilder
+    private func rail(_ title: String, items: [SeerrMedia]) -> some View {
+        if !items.isEmpty {
+            MediaHubSection(title: title) {
+                SeerrMediaCarousel(
+                    items: items,
+                    showsLabels: settingsManager.interface.showsCardLabels,
+                    onSelectMedia: onSelectMedia,
+                )
+            }
+        }
+    }
+
+    @ViewBuilder
     private var emptyState: some View {
+        if viewModel.isLoading {
+            GeometryReader { proxy in
+                RailsSkeleton(showsLabels: settingsManager.interface.showsCardLabels)
+                    .padding(.trailing, LayoutMetrics.pageMargin)
+                    .frame(height: proxy.size.height * 0.60, alignment: .top)
+                    .frame(maxHeight: .infinity, alignment: .bottom)
+            }
+        } else {
+            emptyMessage
+        }
+    }
+
+    private var emptyMessage: some View {
         VStack(spacing: 16) {
-            if viewModel.isLoading {
-                ProgressView("integrations.seerr.discover.loading")
-            } else if let errorMessage = viewModel.errorMessage {
+            if let errorMessage = viewModel.errorMessage {
                 Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(.red)
             } else {
                 Text("common.empty.nothingToShow")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.textSecondary)
             }
         }
     }

@@ -10,6 +10,14 @@ enum ArtworkResource {
     case data(Data)
 }
 
+/// What a library tile shows: a few backdrops from the library, which it cycles through, and how many titles it holds.
+struct LibraryPreview {
+    static let artworkCount = 4
+
+    let artworks: [ArtworkResource]
+    let itemCount: Int?
+}
+
 struct MediaDetailContent {
     let media: MediaItem
     let parentSeries: MediaItem?
@@ -176,7 +184,7 @@ extension MediaHomeService {
 @MainActor
 protocol MediaLibraryService: AnyObject {
     func libraries() async throws -> [Library]
-    func randomArtwork(for library: Library) async throws -> ArtworkResource?
+    func preview(for library: Library) async throws -> LibraryPreview?
     func recommended(in library: Library) async throws -> [Hub]
     func items(
         in library: Library,

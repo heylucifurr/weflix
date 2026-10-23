@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct LibraryBrowseView: View {
+    @Environment(SettingsManager.self) private var settingsManager
     @State var viewModel: LibraryBrowseViewModel
     let onSelectMedia: (MediaDisplayItem) -> Void
 
@@ -49,6 +50,12 @@ struct LibraryBrowseView: View {
                             switch viewModel.layout {
                             case .grid:
                                 PosterGrid(spacing: 32, rowSpacing: 32) { cardWidth in
+                                    if viewModel.isLoading, viewModel.itemsByIndex.isEmpty {
+                                        PosterSkeletonCards(
+                                            width: cardWidth,
+                                            showsLabels: settingsManager.interface.showsCardLabels,
+                                        )
+                                    }
                                     browseItems(cardWidth: cardWidth)
                                 }
                             case .list:
@@ -75,7 +82,9 @@ struct LibraryBrowseView: View {
                 if viewModel.folderTree != nil {
                     EmptyView()
                 } else if viewModel.isLoading, viewModel.itemsByIndex.isEmpty {
-                    ProgressView("library.browse.loading")
+                    if viewModel.layout == .list {
+                        ProgressView("library.browse.loading")
+                    }
                 } else if let errorMessage = viewModel.errorMessage, viewModel.itemsByIndex.isEmpty {
                     ContentUnavailableView(
                         errorMessage,
@@ -132,7 +141,7 @@ struct LibraryBrowseView: View {
     private func browseItem(_ item: LibraryBrowseItem, cardWidth: CGFloat?) -> some View {
         switch (item, viewModel.layout) {
         case let (.media(media), .grid):
-            PortraitMediaCard(media: media, width: cardWidth, showsLabels: true) {
+            PortraitMediaCard(media: media, width: cardWidth, showsLabels: settingsManager.interface.showsCardLabels) {
                 onSelectMedia(media)
             }
         case let (.media(media), .list):
@@ -177,8 +186,8 @@ struct LibraryBrowseView: View {
             Text(character.title)
                 .font(.caption2)
                 .frame(width: 32, height: 32)
-                .background(isFocused ? Color.white.opacity(0.2) : Color.clear)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .background(isFocused ? Color.surfaceRaised : Color.clear)
+                .clipShape(RoundedRectangle(cornerRadius: MediaArtworkMetrics.compactCornerRadius, style: .continuous))
         }
         .buttonStyle(.plain)
         .focused($focusedCharacterId, equals: character.id)

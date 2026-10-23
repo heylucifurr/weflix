@@ -10,7 +10,7 @@ final class SettingsNavigation {
         let content: AnyView
     }
 
-    var category: SettingsCategory = .playback
+    var category: SettingsCategory
     var pages: [SettingsCategory: [Page]] = [:]
     var sidebarFocused = true
     var sidebarRequest = 0
@@ -18,6 +18,10 @@ final class SettingsNavigation {
     var pendingDetailFocus: String?
     var focusedControls: [String: String] = [:]
     var scrollOffsets: [String: CGFloat] = [:]
+
+    init(category: SettingsCategory) {
+        self.category = category
+    }
 
     var currentPages: [Page] {
         pages[category, default: []]
@@ -270,7 +274,7 @@ struct SettingsPicker<Value: Hashable>: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.trailing)
                 Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
+                    .font(.cardMetadata.weight(.semibold))
                     .foregroundStyle(.secondary)
             }
         }
@@ -295,7 +299,7 @@ private struct SettingsOptionsView<Value: Hashable>: View {
                         Spacer()
                         if selection == value {
                             Image(systemName: "checkmark")
-                                .foregroundStyle(Color.brandPrimary)
+                                .foregroundStyle(Color.selectionAccent)
                         }
                     }
                 }

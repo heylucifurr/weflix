@@ -151,7 +151,7 @@ struct MainTabView: View {
                         .navigationDestination(for: MoreRoute.self) { route in
                             switch route {
                             case .settings:
-                                SettingsView()
+                                SettingsView(canManageAccounts: sessionManager.canManageAccounts)
                             case .favorites:
                                 FavoritesView(
                                     sessionManager: sessionManager,
@@ -166,6 +166,7 @@ struct MainTabView: View {
             }
         }
         .environmentObject(coordinator)
+        .mediaCardActions(registry: registry, presenter: coordinator, showMedia: coordinator.showMediaDetail)
         .task {
             sharePlayCoordinator.configurePlaybackPresenter(coordinator)
             try? await libraryStore.loadLibraries()

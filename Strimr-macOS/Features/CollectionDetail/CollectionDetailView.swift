@@ -2,6 +2,7 @@ import Observation
 import SwiftUI
 
 struct CollectionDetailView: View {
+    @Environment(SettingsManager.self) private var settingsManager
     @Environment(MediaServices.self) private var mediaServices
     @Environment(\.scenePhase) private var scenePhase
     @State var viewModel: CollectionDetailViewModel
@@ -31,13 +32,17 @@ struct CollectionDetailView: View {
 
                 PosterGrid(spacing: 12, rowSpacing: 16) { cardWidth in
                     ForEach(bindableViewModel.items) { media in
-                        PortraitMediaCard(media: media, width: cardWidth, showsLabels: true) {
+                        PortraitMediaCard(
+                            media: media,
+                            width: cardWidth,
+                            showsLabels: settingsManager.interface.showsCardLabels,
+                        ) {
                             onSelectMedia(media)
                         }
                     }
                 }
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, LayoutMetrics.pageMargin)
             .padding(.top, 16)
         }
         .overlay {
@@ -84,20 +89,19 @@ struct CollectionDetailView: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 Text(viewModel.collection.title)
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundStyle(.primary)
+                    .font(.tileTitle)
+                    .foregroundStyle(.textPrimary)
 
                 if let elementsCountText = viewModel.elementsCountText {
                     Text(elementsCountText)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .font(.facts)
+                        .foregroundStyle(.textSecondary)
                 }
 
                 if let yearsText = viewModel.yearsText {
                     Text(yearsText)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .font(.facts)
+                        .foregroundStyle(.textSecondary)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -109,32 +113,17 @@ struct CollectionDetailView: View {
             Button {
                 onPlay(viewModel.collection.id)
             } label: {
-                HStack(spacing: 12) {
-                    Spacer(minLength: 0)
-                    Image(systemName: "play.fill")
-                        .font(.headline.weight(.semibold))
-                    Text("common.actions.play")
-                        .fontWeight(.semibold)
-                    Spacer(minLength: 0)
-                }
-                .frame(maxWidth: .infinity)
+                Label("common.actions.play", systemImage: "play.fill")
+                    .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .tint(.brandSecondary)
-            .foregroundStyle(.brandSecondaryForeground)
-            .frame(maxWidth: .infinity)
+            .actionButtonStyle(.primary)
 
             Button {
                 onShuffle(viewModel.collection.id)
             } label: {
                 Image(systemName: "shuffle")
-                    .font(.headline.weight(.semibold))
-                    .frame(width: 48)
             }
-            .buttonStyle(.bordered)
-            .controlSize(.large)
-            .tint(.brandSecondary)
+            .actionButtonStyle(.secondary)
             .accessibilityLabel(Text("common.actions.shuffle"))
         }
     }

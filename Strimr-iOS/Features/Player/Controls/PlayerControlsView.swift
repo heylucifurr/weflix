@@ -112,7 +112,7 @@ struct PlayerControlsView: View {
                                 systemImage: "dot.radiowaves.left.and.right",
                                 action: onGoLive,
                             )
-                            .buttonStyle(.borderedProminent)
+                            .actionButtonStyle(.primary)
                             .disabled(behindLiveSeconds < 2)
                         }
                         .foregroundStyle(.white)
@@ -228,43 +228,30 @@ private struct PlayerControlsHeader: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
-            Button(action: onDismiss) {
-                Image(systemName: "chevron.backward")
-                    .font(.headline.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 42, height: 42)
-                    .background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .stroke(Color.white.opacity(0.18), lineWidth: 1),
-                    )
-            }
+            PlayerIconButton(
+                systemName: "chevron.backward",
+                accessibilityLabel: String(localized: "common.actions.close"),
+                size: .small,
+                action: onDismiss,
+            )
 
             VStack(alignment: .leading, spacing: 4) {
                 if let title = media?.primaryLabel {
                     Text(title)
-                        .font(.title3.weight(.semibold))
-                        .foregroundStyle(.white)
+                        .font(.sectionTitle)
+                        .foregroundStyle(.textPrimary)
                         .lineLimit(2)
                 }
 
                 if let subtitle = media?.tertiaryLabel {
                     Text(subtitle)
-                        .font(.callout)
-                        .foregroundStyle(.white.opacity(0.8))
+                        .font(.facts)
+                        .foregroundStyle(.textSecondary)
                         .lineLimit(2)
                 }
 
                 if isSharePlay {
-                    Text("sharePlay.badge")
-                        .font(.caption.weight(.semibold))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(
-                            Capsule(style: .continuous)
-                                .fill(Color.white.opacity(0.15)),
-                        )
-                        .foregroundStyle(.white.opacity(0.9))
+                    PlayerBadge(String(localized: "sharePlay.badge"))
                 }
             }
 
@@ -357,35 +344,5 @@ private struct PrimaryControls: View {
         let supported = [5, 10, 15, 30, 45, 60]
         guard supported.contains(seconds) else { return prefix }
         return "\(prefix).\(seconds)"
-    }
-}
-
-private struct PlayerControlsBackground: View {
-    var body: some View {
-        VStack(spacing: 0) {
-            LinearGradient(
-                colors: [
-                    .black.opacity(0.55),
-                    .clear,
-                ],
-                startPoint: .top,
-                endPoint: .bottom,
-            )
-            .frame(height: 180)
-
-            Spacer()
-
-            LinearGradient(
-                colors: [
-                    .clear,
-                    .black.opacity(0.7),
-                ],
-                startPoint: .top,
-                endPoint: .bottom,
-            )
-            .frame(height: 260)
-        }
-        .ignoresSafeArea()
-        .allowsHitTesting(false)
     }
 }

@@ -75,6 +75,32 @@ struct SettingsInterfaceView: View {
             }
 
             Section {
+                Toggle(
+                    "settings.interface.titleLogo",
+                    isOn: Binding(
+                        get: { settingsManager.interface.showsTitleLogo },
+                        set: { settingsManager.setShowsTitleLogo($0) },
+                    ),
+                )
+                .settingsFocus("settings.interface.titleLogo")
+            } footer: {
+                Text("settings.interface.titleLogo.footer")
+            }
+
+            Section {
+                Toggle(
+                    "settings.interface.cardLabels",
+                    isOn: Binding(
+                        get: { settingsManager.interface.showsCardLabels },
+                        set: { settingsManager.setShowsCardLabels($0) },
+                    ),
+                )
+                .settingsFocus("settings.interface.cardLabels")
+            } footer: {
+                Text("settings.interface.cardLabels.footer")
+            }
+
+            Section {
                 SettingsPicker(
                     "settings.interface.posterSize",
                     selection: Binding(

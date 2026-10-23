@@ -63,19 +63,19 @@ struct MediaArtworkPlaceholder: View {
 
             ZStack {
                 ContainerRelativeShape()
-                    .fill(Color.brandSecondary.opacity(0.1))
+                    .fill(.surfaceSubtle)
 
                 VStack(spacing: 10) {
                     Image(systemName: systemImage)
                         .font(.system(size: iconSize, weight: .semibold))
-                        .foregroundStyle(.brandSecondary)
+                        .foregroundStyle(.textTertiary)
                         .frame(width: iconSize * 2, height: iconSize * 2)
-                        .background(Color.brandSecondary.opacity(0.1), in: Circle())
+                        .background(.surfaceSubtle, in: Circle())
 
                     if showsLabel {
                         Text("media.placeholder.noArtwork")
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(.secondary)
+                            .font(.cardMetadata.weight(.medium))
+                            .foregroundStyle(.textTertiary)
                             .multilineTextAlignment(.center)
                     }
                 }
@@ -153,7 +153,7 @@ struct SpoilerProtectionIndicator: View {
             .font(.caption.weight(.semibold))
             .foregroundStyle(.primary)
             .padding(7)
-            .background(.ultraThinMaterial, in: Circle())
+            .glassSurface(in: Circle())
             .accessibilityLabel("media.spoilerProtection.artworkHidden")
     }
 }

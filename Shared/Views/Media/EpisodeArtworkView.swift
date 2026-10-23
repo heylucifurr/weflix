@@ -21,7 +21,7 @@ struct EpisodeArtworkView: View {
                         if let image = phase.image {
                             image.resizable().scaledToFit()
                         } else {
-                            Color.gray.opacity(0.15)
+                            Color.surfaceSubtle
                         }
                     }
                 } else {
@@ -39,23 +39,19 @@ struct EpisodeArtworkView: View {
             if let runtime {
                 Label {
                     Text(runtime)
-                        .font(.caption2)
-                        .fontWeight(.semibold)
                 } icon: {
                     Image(systemName: "clock")
-                        .font(.caption2)
                 }
+                .font(.badge)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
-                .background(.ultraThinMaterial, in: Capsule())
+                .glassSurface(in: Capsule())
                 .padding(10)
             }
         }
         .overlay(alignment: .bottomLeading) {
             if let progress {
-                ProgressView(value: progress)
-                    .progressViewStyle(.linear)
-                    .tint(.brandPrimary)
+                CardProgressBar(progress: progress)
                     .padding(.horizontal, 10)
                     .padding(.bottom, 10)
             }

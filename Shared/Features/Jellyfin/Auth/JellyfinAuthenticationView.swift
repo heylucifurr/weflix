@@ -26,15 +26,19 @@ struct JellyfinAuthenticationView: View {
 
                 if viewModel.step == .server {
                     Text("jellyfin.auth.server.title")
-                        .font(.largeTitle.bold())
+                        .font(.heroTitle)
+                        .foregroundStyle(.textPrimary)
                     Text("jellyfin.auth.server.subtitle")
-                        .foregroundStyle(.secondary)
+                        .font(.bodyText)
+                        .foregroundStyle(.textSecondary)
                         .multilineTextAlignment(.center)
                 } else {
                     Text("jellyfin.auth.credentials.title")
-                        .font(.largeTitle.bold())
+                        .font(.heroTitle)
+                        .foregroundStyle(.textPrimary)
                     Text("jellyfin.auth.credentials.subtitle \(viewModel.serverName)")
-                        .foregroundStyle(.secondary)
+                        .font(.bodyText)
+                        .foregroundStyle(.textSecondary)
                         .multilineTextAlignment(.center)
                 }
             }
@@ -67,6 +71,7 @@ struct JellyfinAuthenticationView: View {
 
             if let errorMessage = viewModel.errorMessage {
                 Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
+                    .font(.facts)
                     .foregroundStyle(.red)
                     .multilineTextAlignment(.center)
             }
@@ -78,10 +83,7 @@ struct JellyfinAuthenticationView: View {
                     } label: {
                         primaryButtonLabel("common.actions.continue", isLoading: viewModel.isLoading)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .buttonBorderShape(.roundedRectangle(radius: 12))
-                    .controlSize(.large)
-                    .tint(.brandPrimary)
+                    .actionButtonStyle(.primary)
                     .disabled(
                         viewModel.isBusy
                             || viewModel.serverURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
@@ -103,9 +105,7 @@ struct JellyfinAuthenticationView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 4)
                     }
-                    .buttonStyle(.bordered)
-                    .buttonBorderShape(.roundedRectangle(radius: 12))
-                    .controlSize(.large)
+                    .actionButtonStyle(.secondary)
                     .disabled(viewModel.isBusy)
                 } else {
                     Button {
@@ -113,10 +113,7 @@ struct JellyfinAuthenticationView: View {
                     } label: {
                         primaryButtonLabel("jellyfin.auth.signIn", isLoading: viewModel.isLoading)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .buttonBorderShape(.roundedRectangle(radius: 12))
-                    .controlSize(.large)
-                    .tint(.brandPrimary)
+                    .actionButtonStyle(.primary)
                     .disabled(
                         viewModel.isBusy
                             || viewModel.username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
@@ -163,10 +160,12 @@ struct JellyfinAuthenticationView: View {
         if let code = viewModel.quickConnectCode {
             VStack(spacing: 8) {
                 Text("jellyfin.auth.quickConnect.instructions")
-                    .foregroundStyle(.secondary)
+                    .font(.bodyText)
+                    .foregroundStyle(.textSecondary)
                     .multilineTextAlignment(.center)
                 Text(code)
                     .font(.system(.largeTitle, design: .monospaced).bold())
+                    .foregroundStyle(.textPrimary)
                 #if !os(tvOS)
                     .textSelection(.enabled)
                 #endif
@@ -180,9 +179,7 @@ struct JellyfinAuthenticationView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 4)
             }
-            .buttonStyle(.bordered)
-            .buttonBorderShape(.roundedRectangle(radius: 12))
-            .controlSize(.large)
+            .actionButtonStyle(.secondary)
             .disabled(viewModel.isBusy)
         }
     }
@@ -195,20 +192,21 @@ struct JellyfinAuthenticationView: View {
                         Task { await viewModel.selectDiscoveredServer(server) }
                     } label: {
                         HStack(spacing: serverRowSpacing) {
+                            // Hierarchical styles: the focused plain button turns white on tvOS.
                             Circle()
-                                .fill(.brandPrimary.opacity(0.2))
+                                .fill(.secondary.opacity(0.2))
                                 .frame(width: serverIconSize, height: serverIconSize)
                                 .overlay {
                                     Image(systemName: "server.rack")
-                                        .foregroundStyle(.brandPrimary)
+                                        .foregroundStyle(.secondary)
                                 }
 
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(server.name)
-                                    .font(.headline)
+                                    .font(.rowTitle)
                                     .foregroundStyle(.primary)
                                 Text(server.url.absoluteString)
-                                    .font(.subheadline)
+                                    .font(.facts)
                                     .foregroundStyle(.secondary)
                                     .lineLimit(1)
                             }
@@ -220,8 +218,10 @@ struct JellyfinAuthenticationView: View {
                         }
                         .padding(serverRowPadding)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.secondary.opacity(0.08))
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .background(
+                            .surfaceSubtle,
+                            in: RoundedRectangle(cornerRadius: LayoutMetrics.cardCornerRadius, style: .continuous),
+                        )
                     }
                     .buttonStyle(.plain)
                     .disabled(viewModel.isBusy)
@@ -340,6 +340,10 @@ struct JellyfinAuthenticationView: View {
 }
 
 private extension View {
+    private var fieldShape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: MediaArtworkMetrics.compactCornerRadius, style: .continuous)
+    }
+
     @ViewBuilder
     func jellyfinAuthenticationFieldStyle() -> some View {
         #if os(tvOS)
@@ -349,11 +353,9 @@ private extension View {
             textFieldStyle(.plain)
                 .padding(.horizontal, 16)
                 .frame(minHeight: 54)
-                .background(Color.secondary.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .background(.surfaceSubtle, in: fieldShape)
                 .overlay {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(Color.secondary.opacity(0.2))
+                    fieldShape.stroke(.strokeSubtle)
                 }
         #endif
     }

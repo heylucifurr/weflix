@@ -199,31 +199,31 @@ final class JellyfinMediaServiceAdapter: MediaHomeService, MediaLibraryService, 
         try await catalog.libraries().map { Library(jellyfinItem: $0, server: server) }
     }
 
-    func randomArtwork(for library: Library) async throws -> ArtworkResource? {
+    func preview(for library: Library) async throws -> LibraryPreview? {
         let type = switch library.type {
         case .series: "Series"
         case .collection: "BoxSet"
         case .playlist: "Playlist"
         default: "Movie"
         }
-        let item: JellyfinItem? = switch library.type {
-        case .collection, .playlist:
-            try await catalog.items(
-                parentID: library.id,
-                includeTypes: type,
-                limit: 1,
-            ).items.first
-        default:
-            try await catalog.latest(types: type, parentID: library.id, limit: 1).first
-        }
-        guard let item, let media = MediaDisplayItem(jellyfinItem: item, server: server) else {
-            return nil
-        }
+        let result = try await catalog.items(
+            parentID: library.id,
+            includeTypes: type,
+            limit: LibraryPreview.artworkCount,
+            sortBy: "Random",
+        )
         let artworkKind: MediaImageViewModel.ArtworkKind = switch library.type {
         case .collection, .playlist: .thumb
         default: .art
         }
-        return try await artwork(for: media, kind: artworkKind, width: 800, height: 450)
+        var artworks: [ArtworkResource] = []
+        for item in result.items {
+            guard let media = MediaDisplayItem(jellyfinItem: item, server: server),
+                  let artwork = try await artwork(for: media, kind: artworkKind, width: 1280, height: 720)
+            else { continue }
+            artworks.append(artwork)
+        }
+        return LibraryPreview(artworks: artworks, itemCount: result.totalRecordCount)
     }
 
     func recommended(in library: Library) async throws -> [Hub] {

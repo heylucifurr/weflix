@@ -60,8 +60,8 @@ struct ProfileSwitcherView: View {
             ScrollView {
                 VStack(spacing: 40) {
                     Text("auth.profile.header.title")
-                        .font(.largeTitle.bold())
-                        .foregroundStyle(.white)
+                        .font(.heroTitle)
+                        .foregroundStyle(.textPrimary)
                         .multilineTextAlignment(.center)
 
                     if let error = viewModel.errorMessage {
@@ -85,10 +85,10 @@ struct ProfileSwitcherView: View {
         if viewModel.choices.isEmpty {
             if viewModel.isLoading {
                 ProgressView("auth.profile.loading")
-                    .tint(.white)
+                    .tint(.textPrimary)
             } else {
                 Text("auth.profile.empty")
-                    .foregroundStyle(.white.opacity(0.7))
+                    .foregroundStyle(.textSecondary)
             }
         } else {
             CenteredFlowLayout(spacing: ProfilePickerMetrics.itemSpacing, lineSpacing: 32) {
@@ -119,54 +119,40 @@ struct ProfileSwitcherView: View {
     }
 
     private func pinStage(for choice: ProfileChoice) -> some View {
-        ScrollView {
-            VStack(spacing: 28) {
-                ProfileAvatarView(
-                    choice: choice,
-                    isSwitching: viewModel.switchingID == choice.id,
-                    showsBadges: false,
-                    namespace: namespace,
-                )
-                VStack(spacing: 8) {
-                    Text(choice.name)
-                        .font(.title2.bold())
-                    Text(viewModel.errorMessage ?? String(localized: "auth.profile.pin.prompt \(choice.name)"))
-                        .foregroundStyle(.white.opacity(0.7))
-                        .multilineTextAlignment(.center)
-                }
-                .foregroundStyle(.white)
-
-                PINDotsView(count: viewModel.pin.count)
-                    .shake(viewModel.rejectedPINCount)
-
-                ProfileKeypad(
-                    canDelete: !viewModel.pin.isEmpty,
-                    onDigit: viewModel.appendPINDigit,
-                    onDelete: viewModel.deletePINDigit,
-                )
-                .disabled(viewModel.switchingID != nil)
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 24)
-            .frame(maxWidth: .infinity)
+        PINEntryPad(
+            title: choice.name,
+            message: viewModel.errorMessage ?? String(localized: "auth.profile.pin.prompt \(choice.name)"),
+            pinCount: viewModel.pin.count,
+            rejectedCount: viewModel.rejectedPINCount,
+            isDisabled: viewModel.switchingID != nil,
+            onDigit: viewModel.appendPINDigit,
+            onDelete: viewModel.deletePINDigit,
+        ) {
+            ProfileAvatarView(
+                choice: choice,
+                isSwitching: viewModel.switchingID == choice.id,
+                showsBadges: false,
+                namespace: namespace,
+            )
+        } footer: {
+            EmptyView()
         }
-        .scrollBounceBehavior(.basedOnSize)
         .transition(.opacity)
     }
 
     private func errorBanner(_ message: String) -> some View {
         VStack(spacing: 12) {
             Text(message)
-                .foregroundStyle(.white)
+                .foregroundStyle(.textPrimary)
                 .multilineTextAlignment(.center)
             Button("common.actions.retry", systemImage: "arrow.clockwise") {
                 Task { await viewModel.load() }
             }
             .fontWeight(.semibold)
-            .foregroundStyle(.white)
+            .foregroundStyle(.textPrimary)
         }
         .padding(20)
         .frame(maxWidth: 420)
-        .profileGlass(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .glassSurface(in: RoundedRectangle(cornerRadius: LayoutMetrics.overlayCornerRadius, style: .continuous))
     }
 }

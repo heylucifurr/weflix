@@ -38,10 +38,11 @@ struct SelectServerView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("serverSelection.title")
-                .font(.largeTitle.bold())
+                .font(.heroTitle)
+                .foregroundStyle(.textPrimary)
             Text("serverSelection.multiple.subtitle")
-                .foregroundStyle(.secondary)
-                .font(.title3)
+                .foregroundStyle(.textSecondary)
+                .font(.bodyText)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -54,20 +55,18 @@ struct SelectServerView: View {
         } else if viewModel.servers.isEmpty {
             VStack(alignment: .leading, spacing: 14) {
                 Text("serverSelection.empty.title")
-                    .font(.title2.bold())
+                    .font(.sectionTitle)
+                    .foregroundStyle(.textPrimary)
                 Text("serverSelection.empty.description")
-                    .foregroundStyle(.secondary)
-                    .font(.callout)
+                    .foregroundStyle(.textSecondary)
+                    .font(.bodyText)
                 Button {
                     Task { await viewModel.load() }
                 } label: {
                     Text("serverSelection.retry")
-                        .fontWeight(.semibold)
                         .frame(maxWidth: 320)
-                        .padding()
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.brandPrimary)
+                .actionButtonStyle(.primary)
                 .disabled(viewModel.isLoading)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -85,12 +84,9 @@ struct SelectServerView: View {
                             viewModel.continueWithSelection()
                         } label: {
                             Text("common.actions.continue")
-                                .fontWeight(.semibold)
                                 .frame(maxWidth: 480)
-                                .padding()
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.brandPrimary)
+                        .actionButtonStyle(.primary)
                         .disabled(viewModel.selectedServerIDs.isEmpty)
                     }
                     .frame(maxWidth: .infinity)
@@ -109,7 +105,7 @@ struct SelectServerView: View {
                 Button("serverSelection.customAddress.suggest") {
                     viewModel.showCustomAddress(for: server)
                 }
-                .font(.callout)
+                .font(.facts)
             }
         }
     }
@@ -119,31 +115,35 @@ struct SelectServerView: View {
             viewModel.toggle(server)
         } label: {
             HStack(spacing: 48) {
+                // Hierarchical styles: the focused plain button turns white.
                 Circle()
-                    .fill(.brandPrimary.opacity(0.2))
+                    .fill(.secondary.opacity(0.2))
                     .frame(width: 64, height: 64)
                     .overlay(
                         Image(systemName: "server.rack")
                             .font(.title)
-                            .foregroundStyle(.brandPrimary),
+                            .foregroundStyle(.secondary),
                     )
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(server.name)
-                        .font(.title2.weight(.semibold))
+                        .font(.tileTitle)
                     ServerConnectionSummary(state: viewModel.probeState(of: server))
+                        .font(.bodyText)
                 }
 
                 Spacer()
 
                 Image(systemName: viewModel.isSelected(server) ? "checkmark.circle.fill" : "circle")
                     .font(.title)
-                    .foregroundStyle(viewModel.isSelected(server) ? Color.brandPrimary : Color.secondary)
+                    .foregroundStyle(viewModel.isSelected(server) ? Color.selectionAccent : Color.secondary)
             }
             .padding(32)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.white.opacity(0.06))
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .background(
+                .surfaceSubtle,
+                in: RoundedRectangle(cornerRadius: LayoutMetrics.cardCornerRadius, style: .continuous),
+            )
         }
         .buttonStyle(.plain)
         .focused($focusedServerID, equals: server.clientIdentifier)

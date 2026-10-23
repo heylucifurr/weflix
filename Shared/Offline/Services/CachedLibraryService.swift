@@ -26,29 +26,67 @@ class CachedLibraryService: MediaLibraryService {
         )
     }
 
-    func randomArtwork(for library: Library) async throws -> ArtworkResource? {
-        let key = "library-artwork:\(library.id)|720"
+    func preview(for library: Library) async throws -> LibraryPreview? {
+        let artworkKeys = (0 ..< LibraryPreview.artworkCount).map { "library-artwork:\(library.id)|720|\($0)" }
+        let countKey = "library-count:\(library.id)"
         return try await policy.read(
             network: {
-                guard let resource = try await base.randomArtwork(for: library) else { return nil }
-                switch resource {
-                case .data:
-                    return resource
-                case let .url(url):
-                    return try await .data(URLSession.shared.data(from: url).0)
+                guard let preview = try await base.preview(for: library) else { return nil }
+                return try await LibraryPreview(
+                    artworks: Self.downloaded(preview.artworks),
+                    itemCount: preview.itemCount,
+                )
+            },
+            write: { preview in
+                for (key, artwork) in zip(artworkKeys, preview?.artworks ?? []) {
+                    guard case let .data(data) = artwork else { continue }
+                    policy.store.storeArtwork(
+                        data,
+                        key: key,
+                        owner: policy.owner,
+                        width: nil,
+                        height: nil,
+                        pinned: false,
+                    )
+                }
+                if let itemCount = preview?.itemCount {
+                    policy.store.store(
+                        list: [],
+                        key: countKey,
+                        payload: policy.store.encode(itemCount),
+                        owner: policy.owner,
+                    )
                 }
             },
-            write: { resource in
-                guard case let .data(data)? = resource else { return }
-                policy.store.storeArtwork(data, key: key, owner: policy.owner, width: nil, height: nil, pinned: false)
-            },
             fallback: {
-                guard let url = policy.store.artworkFileURL(key: key, owner: policy.owner),
-                      let data = try? Data(contentsOf: url)
-                else { return nil }
-                return .data(data)
+                let artworks = artworkKeys.compactMap { key in
+                    policy.store.artworkFileURL(key: key, owner: policy.owner)
+                        .flatMap { try? Data(contentsOf: $0) }
+                        .map(ArtworkResource.data)
+                }
+                let itemCount = policy.store.list(key: countKey, owner: policy.owner)?.payload
+                    .flatMap { policy.store.decode(Int.self, from: $0) }
+                guard !artworks.isEmpty || itemCount != nil else { return nil }
+                return LibraryPreview(artworks: artworks, itemCount: itemCount)
             },
         )
+    }
+
+    /// Fetches remote artworks in parallel, keeping their order, so they can be stored for offline use.
+    private static func downloaded(_ artworks: [ArtworkResource]) async throws -> [ArtworkResource] {
+        try await withThrowingTaskGroup(of: (Int, Data?).self) { group in
+            for (index, artwork) in artworks.enumerated() {
+                guard case let .url(url) = artwork else { continue }
+                group.addTask {
+                    try await (index, URLSession.shared.data(from: url).0)
+                }
+            }
+            var resolved = artworks
+            for try await case let (index, data?) in group {
+                resolved[index] = .data(data)
+            }
+            return resolved
+        }
     }
 
     func recommended(in library: Library) async throws -> [Hub] {

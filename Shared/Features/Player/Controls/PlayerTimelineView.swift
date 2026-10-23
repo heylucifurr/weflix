@@ -58,9 +58,9 @@ struct PlayerTimelineView: View {
                let chapter = chapter(at: position)
             {
                 Text(chapter.displayTitle)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.9))
-                    .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+                    .font(.cardMetadata.weight(.semibold))
+                    .foregroundStyle(.textPrimary)
+                    .videoTextShadow()
                     .transition(.opacity)
             }
 
@@ -106,17 +106,17 @@ struct PlayerTimelineView: View {
                                 now: context.date,
                             ) {
                                 Text(endsAtText)
-                                    .font(.caption2.monospacedDigit())
-                                    .foregroundStyle(.white.opacity(0.7))
+                                    .font(.cardMetadata.monospacedDigit())
+                                    .foregroundStyle(.textSecondary)
                             }
                         }
                     }
                 }
                 .fixedSize()
             }
-            .font(.footnote.monospacedDigit())
-            .foregroundStyle(.white.opacity(0.9))
-            .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+            .font(.facts.monospacedDigit())
+            .foregroundStyle(.textPrimary)
+            .videoTextShadow()
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 8)
@@ -154,7 +154,7 @@ struct PlayerTimelineView: View {
     }
 
     private func handleEditingChanged(_ editing: Bool) {
-        withAnimation(.easeInOut(duration: 0.15)) {
+        withAnimation(Motion.crossfade) {
             isEditing = editing
         }
         onEditingChanged(editing)
@@ -249,23 +249,20 @@ struct PlayerScrubPreviewCard: View {
         .clipped()
         .overlay(alignment: .bottomTrailing) {
             Text(playerTimestampText(position))
-                .font(.caption.monospacedDigit().weight(.semibold))
-                .foregroundStyle(.white)
+                .font(.badge.monospacedDigit())
+                .foregroundStyle(.textPrimary)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 5)
-                .background(.black.opacity(0.72), in: Capsule())
+                .videoOverlayGlass()
                 .padding(8)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: MediaArtworkMetrics.compactCornerRadius, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(.white.opacity(0.2), lineWidth: 1)
+            RoundedRectangle(cornerRadius: MediaArtworkMetrics.compactCornerRadius, style: .continuous)
+                .stroke(.strokeSubtle, lineWidth: 1)
         }
         .shadow(color: .black.opacity(0.45), radius: 12, x: 0, y: 7)
-        .animation(
-            .easeOut(duration: 0.1),
-            value: ObjectIdentifier(image),
-        )
+        .animation(Motion.crossfade, value: ObjectIdentifier(image))
     }
 }
 

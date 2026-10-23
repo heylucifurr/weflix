@@ -7,26 +7,22 @@ struct SeerrManageRequestsView: View {
     let onComplete: () -> Void
 
     var body: some View {
-        ZStack {
-            Color("Background").ignoresSafeArea()
-
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 24) {
-                    if viewModel.pendingRequests.isEmpty {
-                        Text("seerr.manageRequests.empty")
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    } else {
-                        ForEach(viewModel.pendingRequests, id: \.id) { request in
-                            requestCard(for: request)
-                        }
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 24) {
+                if viewModel.pendingRequests.isEmpty {
+                    Text("seerr.manageRequests.empty")
+                        .font(.bodyText)
+                        .foregroundStyle(.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    ForEach(viewModel.pendingRequests, id: \.id) { request in
+                        requestCard(for: request)
                     }
                 }
-                .padding(.horizontal, 32)
-                .padding(.vertical, 24)
             }
+            .padding(24)
         }
-        .navigationTitle("seerr.manageRequests.title")
+        .taskModalTitle("seerr.manageRequests.title")
         .alert("integrations.seerr.error.title", isPresented: $viewModel.isShowingError) {
             Button("common.actions.done") {}
         } message: {
@@ -53,15 +49,12 @@ struct SeerrManageRequestsView: View {
             requestActions(for: request)
         }
         .padding(24)
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color.white.opacity(0.08)),
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(Color.white.opacity(0.12), lineWidth: 1),
-        )
-        .shadow(color: Color.black.opacity(0.35), radius: 14, x: 0, y: 8)
+        .background(.surfaceSubtle, in: cardShape)
+        .overlay(cardShape.stroke(.strokeSubtle, lineWidth: 1))
+    }
+
+    private var cardShape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: LayoutMetrics.overlayCornerRadius, style: .continuous)
     }
 
     private func requestHeader(for request: SeerrRequest) -> some View {
@@ -73,38 +66,36 @@ struct SeerrManageRequestsView: View {
                         image
                             .resizable()
                             .scaledToFill()
-                    case .empty:
-                        Color.gray.opacity(0.2)
-                    case .failure:
-                        Color.gray.opacity(0.2)
-                    @unknown default:
-                        Color.gray.opacity(0.2)
+                    default:
+                        Color.surfaceSubtle
                     }
                 }
                 .frame(width: 56, height: 56)
                 .clipShape(Circle())
             } else {
                 Circle()
-                    .fill(Color.gray.opacity(0.2))
+                    .fill(.surfaceSubtle)
                     .frame(width: 56, height: 56)
             }
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(viewModel.displayName(for: request))
-                    .font(.title3.weight(.semibold))
+                    .font(.sectionTitle)
+                    .foregroundStyle(.textPrimary)
 
                 if let requestedAt = viewModel.requestedAtText(for: request) {
                     Text(requestedAt)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .font(.facts)
+                        .foregroundStyle(.textSecondary)
                 }
 
                 if viewModel.is4kRequest(request) {
                     Text("seerr.manageRequests.badge.4k")
-                        .font(.footnote.weight(.semibold))
+                        .font(.badge)
+                        .foregroundStyle(.textPrimary)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
-                        .background(Color.purple.opacity(0.2), in: Capsule())
+                        .background(.surfaceRaised, in: Capsule())
                 }
             }
 
@@ -117,15 +108,17 @@ struct SeerrManageRequestsView: View {
         let seasonNumbers = viewModel.seasonNumbers(for: request)
         if seasonNumbers.isEmpty {
             Text("seerr.manageRequests.seasons.all")
-                .foregroundStyle(.secondary)
+                .font(.facts)
+                .foregroundStyle(.textSecondary)
         } else {
             HStack(spacing: 8) {
                 ForEach(seasonNumbers, id: \.self) { seasonNumber in
                     Text(String(localized: "seerr.manageRequests.season.badge \(seasonNumber)"))
-                        .font(.footnote.weight(.semibold))
+                        .font(.badge)
+                        .foregroundStyle(.textPrimary)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
-                        .background(.ultraThinMaterial, in: Capsule())
+                        .background(.surfaceRaised, in: Capsule())
                 }
             }
         }
@@ -142,6 +135,7 @@ struct SeerrManageRequestsView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
+            .buttonBorderShape(.capsule)
             .controlSize(.large)
             .tint(.green)
             .disabled(viewModel.isUpdating(request))
@@ -155,6 +149,7 @@ struct SeerrManageRequestsView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
+            .buttonBorderShape(.capsule)
             .controlSize(.large)
             .tint(.red)
             .disabled(viewModel.isUpdating(request))

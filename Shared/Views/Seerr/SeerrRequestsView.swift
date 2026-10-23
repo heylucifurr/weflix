@@ -53,7 +53,7 @@ struct SeerrRequestsView: View {
                 Text("seerr.requests.delete.message")
             }
         #if os(tvOS)
-            .navigationDestination(item: $editRequest) { state in
+            .taskPresentation(item: $editRequest) { state in
                 SeerrMediaRequestView(viewModel: state.viewModel) {
                     Task { await viewModel.reload() }
                 }
@@ -65,7 +65,6 @@ struct SeerrRequestsView: View {
                 }
                 #if os(iOS)
                 .presentationDetents([.medium, .large])
-                .presentationBackground(.ultraThinMaterial)
                 #endif
             }
         #endif
@@ -133,7 +132,7 @@ struct SeerrRequestsView: View {
         #if os(tvOS)
             48
         #else
-            16
+            LayoutMetrics.pageMargin
         #endif
     }
 
@@ -150,32 +149,14 @@ struct SeerrRequestsView: View {
 
     private var statusFilterBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
+            HStack(spacing: LayoutMetrics.chipSpacing) {
                 ForEach(SeerrRequestStatusFilter.allCases) { filter in
-                    let isSelected = viewModel.query.status == filter
-                    Button {
+                    FilterChip(
+                        title: String(localized: String.LocalizationValue(filter.titleKey)),
+                        isSelected: viewModel.query.status == filter,
+                    ) {
                         viewModel.query.status = filter
-                    } label: {
-                        Text(LocalizedStringKey(filter.titleKey))
-                            .font(.subheadline.weight(.semibold))
-                            .lineLimit(1)
-                        #if !os(tvOS)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
-                            .foregroundStyle(isSelected ? Color.white : Color.primary)
-                            .background(
-                                isSelected ? AnyShapeStyle(Color.purple) : AnyShapeStyle(.ultraThinMaterial),
-                                in: Capsule(),
-                            )
-                        #endif
                     }
-                    #if os(tvOS)
-                    .buttonStyle(.bordered)
-                    .tint(isSelected ? .purple : .secondary)
-                    #else
-                    .buttonStyle(.plain)
-                    #endif
-                    .accessibilityAddTraits(isSelected ? .isSelected : [])
                 }
             }
             #if os(tvOS)
@@ -184,6 +165,7 @@ struct SeerrRequestsView: View {
         }
         .scrollBounceBehavior(.basedOnSize)
         #if os(tvOS)
+            .scrollClipDisabled()
             .focusSection()
         #endif
     }
@@ -221,19 +203,13 @@ struct SeerrRequestsView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "tray")
-                .font(.largeTitle)
-                .foregroundStyle(.secondary)
-            Text("seerr.requests.empty")
-                .font(.headline)
-            Text("seerr.requests.empty.description")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-        }
+        ContentUnavailableView(
+            "seerr.requests.empty",
+            systemImage: "tray",
+            description: Text("seerr.requests.empty.description"),
+        )
         .frame(maxWidth: .infinity)
-        .padding(.top, 48)
+        .padding(.top, 24)
     }
 
     private func open(_ request: SeerrRequest) {

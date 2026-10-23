@@ -239,17 +239,22 @@ final class PlexMediaServiceAdapter: MediaHomeService, MediaLibraryService, Medi
         return sections.filter(\.type.isSupported).map { Library(plexSection: $0, server: server) }
     }
 
-    func randomArtwork(for library: Library) async throws -> ArtworkResource? {
+    func preview(for library: Library) async throws -> LibraryPreview? {
         guard let sectionID = library.sectionId else { return nil }
         let response = try await SectionRepository(context: context).getSectionsItems(
             sectionId: sectionID,
-            params: .init(sort: "random", limit: 1),
-            pagination: PlexPagination(start: 0, size: 1),
+            // Paginated rather than limited: `limit` also caps `totalSize`, which the tile shows as the count.
+            params: .init(sort: "random"),
+            pagination: PlexPagination(start: 0, size: LibraryPreview.artworkCount),
         )
-        guard let item = response.mediaContainer.metadata?.first,
-              let path = item.art ?? item.thumb
-        else { return nil }
-        return try await artwork(path: path, width: 800, height: 450)
+        var artworks: [ArtworkResource] = []
+        for item in response.mediaContainer.metadata ?? [] {
+            guard let path = item.art ?? item.thumb,
+                  let artwork = try await artwork(path: path, width: 1280, height: 720)
+            else { continue }
+            artworks.append(artwork)
+        }
+        return LibraryPreview(artworks: artworks, itemCount: response.mediaContainer.totalSize)
     }
 
     func recommended(in library: Library) async throws -> [Hub] {
@@ -392,6 +397,8 @@ final class PlexMediaServiceAdapter: MediaHomeService, MediaLibraryService, Medi
             path: path,
             width: width ?? 240,
             height: height ?? 360,
+            // The transcoder outputs JPEG by default, which would lose the logo's transparency.
+            format: path.contains("/clearLogo") ? "png" : nil,
         )
     }
 

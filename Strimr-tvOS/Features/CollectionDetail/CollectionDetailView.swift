@@ -2,6 +2,7 @@ import Observation
 import SwiftUI
 
 struct CollectionDetailView: View {
+    @Environment(SettingsManager.self) private var settingsManager
     @Environment(MediaServices.self) private var mediaServices
     @Environment(\.scenePhase) private var scenePhase
     @State var viewModel: CollectionDetailViewModel
@@ -30,11 +31,16 @@ struct CollectionDetailView: View {
 
                 PosterGrid(spacing: 32, rowSpacing: 32) { cardWidth in
                     ForEach(bindableViewModel.items) { media in
-                        PortraitMediaCard(media: media, width: cardWidth, showsLabels: true) {
+                        PortraitMediaCard(
+                            media: media,
+                            width: cardWidth,
+                            showsLabels: settingsManager.interface.showsCardLabels,
+                        ) {
                             onSelectMedia(media)
                         }
                     }
                 }
+                .focusSection()
             }
             .padding(.horizontal, 48)
             .padding(.top, 32)
@@ -85,19 +91,19 @@ struct CollectionDetailView: View {
 
             VStack(alignment: .leading, spacing: 12) {
                 Text(viewModel.collection.title)
-                    .font(.title2)
-                    .fontWeight(.bold)
+                    .font(.tileTitle)
+                    .foregroundStyle(.textPrimary)
 
                 if let elementsCountText = viewModel.elementsCountText {
                     Text(elementsCountText)
-                        .font(.headline)
-                        .foregroundStyle(.brandSecondary)
+                        .font(.facts)
+                        .foregroundStyle(.textSecondary)
                 }
 
                 if let yearsText = viewModel.yearsText {
                     Text(yearsText)
-                        .font(.headline)
-                        .foregroundStyle(.brandSecondary)
+                        .font(.facts)
+                        .foregroundStyle(.textSecondary)
                 }
 
                 playButtonsRow
@@ -112,35 +118,20 @@ struct CollectionDetailView: View {
             Button {
                 onPlay(viewModel.collection.id)
             } label: {
-                HStack(spacing: 12) {
-                    Image(systemName: "play.fill")
-                        .font(.title3.weight(.semibold))
-                    Text("common.actions.play")
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                }
-                .frame(maxWidth: 520, alignment: .leading)
+                Label("common.actions.play", systemImage: "play.fill")
+                    .font(.facts.weight(.semibold))
+                    .padding(.horizontal, 12)
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .tint(.brandSecondary)
-            .foregroundStyle(.brandSecondaryForeground)
+            .actionButtonStyle(.primary)
 
             Button {
                 onShuffle(viewModel.collection.id)
             } label: {
-                HStack(spacing: 12) {
-                    Image(systemName: "shuffle")
-                        .font(.title3.weight(.semibold))
-                    Text("common.actions.shuffle")
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                }
-                .frame(maxWidth: 260, alignment: .leading)
+                Label("common.actions.shuffle", systemImage: "shuffle")
+                    .font(.facts.weight(.semibold))
+                    .padding(.horizontal, 12)
             }
-            .buttonStyle(.bordered)
-            .controlSize(.large)
-            .tint(.secondary)
+            .actionButtonStyle(.secondary)
         }
     }
 }

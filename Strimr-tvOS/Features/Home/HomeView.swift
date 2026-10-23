@@ -2,6 +2,7 @@ import SwiftUI
 
 @MainActor
 struct HomeView: View {
+    @Environment(SettingsManager.self) private var settingsManager
     @Environment(\.scenePhase) private var scenePhase
     @Environment(MediaFocusModel.self) private var focusModel
     @EnvironmentObject private var coordinator: MainCoordinator
@@ -39,6 +40,9 @@ struct HomeView: View {
                 emptyState
             }
         }
+        .environment(\.reloadAfterMediaCardAction) { item in
+            Task { await viewModel.refresh(server: item.identity.server) }
+        }
         .task {
             await viewModel.load()
         }
@@ -61,15 +65,14 @@ struct HomeView: View {
                 ForEach(viewModel.rows) { row in
                     HomeRowSectionView(
                         row: row,
-                        showsLabels: false,
+                        showsLabels: settingsManager.interface.showsCardLabels,
                         onViewAll: coordinator.showHubDetail,
                         onSelectMedia: onSelectMedia,
                     )
                 }
 
                 if viewModel.isLoading, !viewModel.hasContent {
-                    ProgressView("home.loading")
-                        .frame(maxWidth: .infinity)
+                    RailsSkeleton(showsLabels: settingsManager.interface.showsCardLabels)
                 }
 
                 if let errorMessage = viewModel.errorMessage {
@@ -80,15 +83,27 @@ struct HomeView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .padding(.trailing, 24)
+            .padding(.trailing, LayoutMetrics.pageMargin)
         }
     }
 
+    @ViewBuilder
     private var emptyState: some View {
+        if viewModel.isLoading {
+            GeometryReader { proxy in
+                RailsSkeleton(showsLabels: settingsManager.interface.showsCardLabels)
+                    .padding(.trailing, LayoutMetrics.pageMargin)
+                    .frame(height: proxy.size.height * 0.60, alignment: .top)
+                    .frame(maxHeight: .infinity, alignment: .bottom)
+            }
+        } else {
+            emptyMessage
+        }
+    }
+
+    private var emptyMessage: some View {
         VStack(spacing: 16) {
-            if viewModel.isLoading {
-                ProgressView("home.loading")
-            } else if let errorMessage = viewModel.errorMessage {
+            if let errorMessage = viewModel.errorMessage {
                 Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(.red)
             } else {

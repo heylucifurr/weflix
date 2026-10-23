@@ -243,6 +243,13 @@ final class SettingsManager {
         persist()
     }
 
+    func setHomeRowStyle(_ style: HomeRowStyle, of row: HomeRow, profileID: String) {
+        var preferences = homeRowPreferences(profileID: profileID)
+        preferences.setStyle(style, of: row)
+        settings.interface.homeRowsByProfile[profileID] = preferences
+        persist()
+    }
+
     func resetHomeRows(profileID: String) {
         settings.interface.homeRowsByProfile.removeValue(forKey: profileID)
         persist()
@@ -343,6 +350,16 @@ final class SettingsManager {
 
     func setThemeMusicVolume(_ volume: ThemeMusicVolume) {
         settings.interface.themeMusicVolume = volume
+        persist()
+    }
+
+    func setShowsTitleLogo(_ enabled: Bool) {
+        settings.interface.showsTitleLogo = enabled
+        persist()
+    }
+
+    func setShowsCardLabels(_ enabled: Bool) {
+        settings.interface.showsCardLabels = enabled
         persist()
     }
 

@@ -11,33 +11,22 @@ struct ExtrasSection: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Divider()
 
-                    Text("media.detail.extras")
-                        .font(.headline)
-                        .fontWeight(.semibold)
-
-                    MediaCarousel(
-                        layout: .landscape,
-                        items: viewModel.extras.map(MediaDisplayItem.playable),
-                        showsLabels: true,
-                        onSelectMedia: { media in
-                            guard let item = media.playableItem else { return }
-                            onPlay(item)
-                        },
-                    )
+                    MediaHubSection(title: String(localized: "media.detail.extras")) {
+                        MediaCarousel(
+                            layout: .landscape,
+                            items: viewModel.extras.map(MediaDisplayItem.playable),
+                            showsLabels: true,
+                            onSelectMedia: { media in
+                                guard let item = media.playableItem else { return }
+                                onPlay(item)
+                            },
+                        )
+                    }
                 }
-                .padding(.horizontal, extrasSectionHorizontalPadding)
+                .padding(.horizontal, LayoutMetrics.detailSectionMargin)
+                .environment(\.railPageMargin, LayoutMetrics.detailSectionMargin)
             }
             .textCase(nil)
         }
     }
-}
-
-private var extrasSectionHorizontalPadding: CGFloat {
-    #if os(macOS)
-        28
-    #elseif os(iOS)
-        16
-    #else
-        0
-    #endif
 }

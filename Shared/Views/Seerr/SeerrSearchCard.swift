@@ -1,34 +1,38 @@
 import SwiftUI
 
+/// Seerr search result, laid out like a library search result.
 struct SeerrSearchCard: View {
     let media: SeerrMedia
     let onTap: () -> Void
 
+    /// Hierarchical styles rather than the fixed text tokens: the focused tvOS button turns white and they invert.
     var body: some View {
         Button(action: onTap) {
             HStack(alignment: .top, spacing: 12) {
-                SeerrMediaArtworkView(
-                    media: media,
-                    width: artworkSize.width,
-                    height: artworkSize.height,
-                )
+                SeerrMediaArtworkView(media: media, width: 100, height: 150)
 
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 8) {
-                        Text(title)
-                            .font(.headline)
+                        Text(media.displayTitle)
+                            .font(.rowTitle)
                             .lineLimit(2)
+
+                        Spacer(minLength: 8)
+
+                        if let kind {
+                            MediaTypeBadge(type: kind)
+                        }
                     }
 
-                    if let subtitle {
-                        Text(subtitle)
-                            .font(.subheadline)
+                    if let year = media.year {
+                        Text(String(year))
+                            .font(.facts)
                             .foregroundStyle(.secondary)
                     }
 
                     if let overview = media.overview, !overview.isEmpty {
                         Text(overview)
-                            .font(.callout)
+                            .font(.facts)
                             .foregroundStyle(.secondary)
                             .lineLimit(3)
                     }
@@ -38,48 +42,21 @@ struct SeerrSearchCard: View {
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color.gray.opacity(0.08)),
+                RoundedRectangle(cornerRadius: LayoutMetrics.cardCornerRadius, style: .continuous)
+                    .fill(.surfaceSubtle),
             )
         }
         .buttonStyle(.plain)
     }
 
-    private var artworkSize: CGSize {
-        #if os(tvOS)
-            CGSize(width: 140, height: 210)
-        #else
-            CGSize(width: 90, height: 135)
-        #endif
-    }
-
-    private var title: String {
+    private var kind: MediaKind? {
         switch media.mediaType {
         case .movie:
-            media.title ?? media.name ?? ""
-        case .tv, .person:
-            media.name ?? media.title ?? ""
-        case .none:
-            media.title ?? media.name ?? ""
-        }
-    }
-
-    private var subtitle: String? {
-        switch media.mediaType {
-        case .movie:
-            year(from: media.releaseDate)
+            .movie
         case .tv:
-            year(from: media.firstAirDate)
-        case .person, .none:
+            .series
+        case .person, nil:
             nil
         }
-    }
-
-    private func year(from dateString: String?) -> String? {
-        guard let dateString, dateString.count >= 4 else {
-            return nil
-        }
-
-        return String(dateString.prefix(4))
     }
 }

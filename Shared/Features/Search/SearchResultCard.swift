@@ -11,6 +11,7 @@ struct SearchResultCard: View {
         result.media
     }
 
+    /// Hierarchical styles rather than the fixed text tokens: the focused tvOS button turns white and they invert.
     var body: some View {
         Button(action: onTap) {
             HStack(alignment: .top, spacing: 12) {
@@ -25,21 +26,21 @@ struct SearchResultCard: View {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 8) {
                         Text(media.primaryLabel)
-                            .font(.headline)
+                            .font(.rowTitle)
                             .lineLimit(2)
 
                         Spacer(minLength: 8)
 
-                        TypeBadge(type: media.type)
+                        MediaTypeBadge(type: media.type)
                     }
 
                     Text(subtitle)
-                        .font(.subheadline)
+                        .font(.facts)
                         .foregroundStyle(.secondary)
 
                     if result.sources.count > 1 {
                         Label(result.serverNames.joined(separator: ", "), systemImage: "server.rack")
-                            .font(.caption)
+                            .font(.cardMetadata)
                             .foregroundStyle(.secondary)
                             .lineLimit(2)
                     }
@@ -48,12 +49,12 @@ struct SearchResultCard: View {
                         at: settingsManager.interface.spoilerProtection,
                     ) == true {
                         Label("media.spoilerProtection.summaryHidden", systemImage: "eye.slash")
-                            .font(.callout)
+                            .font(.facts)
                             .foregroundStyle(.secondary)
                             .lineLimit(3)
                     } else if let summary = media.summary, !summary.isEmpty {
                         Text(summary)
-                            .font(.callout)
+                            .font(.facts)
                             .foregroundStyle(.secondary)
                             .lineLimit(3)
                     }
@@ -63,8 +64,8 @@ struct SearchResultCard: View {
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color.gray.opacity(0.08)),
+                RoundedRectangle(cornerRadius: LayoutMetrics.cardCornerRadius, style: .continuous)
+                    .fill(.surfaceSubtle),
             )
         }
         .buttonStyle(.plain)
@@ -82,8 +83,8 @@ struct SearchUnavailableServersNote: View {
                 String(localized: "search.serverUnavailable \(names.formatted(.list(type: .and)))"),
                 systemImage: "exclamationmark.icloud",
             )
-            .font(.footnote)
-            .foregroundStyle(.secondary)
+            .font(.facts)
+            .foregroundStyle(.textTertiary)
         }
     }
 }
@@ -109,13 +110,13 @@ struct SearchServerSelectionView: View {
     }
 }
 
-private struct TypeBadge: View {
+/// Colored capsule naming the kind of a search result.
+struct MediaTypeBadge: View {
     let type: MediaKind
 
     var body: some View {
         Text(label)
-            .font(.caption)
-            .fontWeight(.semibold)
+            .font(.badge)
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
             .background(
@@ -149,7 +150,7 @@ private struct TypeBadge: View {
     private var color: Color {
         switch type {
         case .movie:
-            .brandPrimary
+            .gray
         case .series:
             .mint
         case .season:
@@ -157,7 +158,7 @@ private struct TypeBadge: View {
         case .episode:
             .purple
         case .clip:
-            .brandPrimary
+            .gray
         case .collection:
             .teal
         case .playlist:

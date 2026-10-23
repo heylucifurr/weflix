@@ -75,6 +75,8 @@ final class MediaDetailViewModel {
     var isUpdatingFavoriteStatus = false
     private(set) var isFavorite = false
     var favoriteActionErrorMessage: String?
+    /// Bumped each time a watched or favorite change is confirmed, to drive success feedback.
+    private(set) var confirmedActionCount = 0
     private var favoriteStatusByID: [String: Bool] = [:]
     private var loadingFavoriteStatusIDs: Set<String> = []
     private var updatingFavoriteStatusIDs: Set<String> = []
@@ -104,6 +106,10 @@ final class MediaDetailViewModel {
 
     var server: ServerIdentity {
         services.identity
+    }
+
+    private var quickActions: MediaQuickActions {
+        MediaQuickActions(services: services)
     }
 
     private var detailTargetID: String {
@@ -163,13 +169,14 @@ final class MediaDetailViewModel {
         watchActionErrorMessage = nil
         defer { updatingWatchStatusIds.remove(item.id) }
 
-        do {
-            try await services.detail.setPlayed(played, itemID: item.id)
+        switch await quickActions.setPlayed(played, for: item) {
+        case .succeeded:
+            confirmedActionCount += 1
             await loadCommonDetails(preservingExistingContent: true)
-        } catch {
-            guard !Task.isCancelled, !error.isCancellation else { return }
-            watchActionErrorMessage = error.localizedDescription
-            ErrorReporter.capture(error)
+        case let .failed(message):
+            watchActionErrorMessage = message
+        case .cancelled:
+            break
         }
     }
 
@@ -212,18 +219,18 @@ final class MediaDetailViewModel {
             }
         }
 
-        do {
-            let updatedValue = !isFavorite(for: item)
-            try await services.favorites.setFavorite(updatedValue, media: item)
-            guard !Task.isCancelled else { return }
+        let updatedValue = !isFavorite(for: item)
+        switch await quickActions.setFavorite(updatedValue, for: item) {
+        case .succeeded:
+            confirmedActionCount += 1
             favoriteStatusByID[item.id] = updatedValue
             if isPrimaryItem {
                 isFavorite = updatedValue
             }
-        } catch {
-            guard !Task.isCancelled, !error.isCancellation else { return }
-            favoriteActionErrorMessage = error.localizedDescription
-            ErrorReporter.capture(error)
+        case let .failed(message):
+            favoriteActionErrorMessage = message
+        case .cancelled:
+            break
         }
     }
 
@@ -475,20 +482,18 @@ final class MediaDetailViewModel {
             : String(localized: "common.actions.play")
     }
 
-    var primaryActionDetail: String? {
-        guard let target = primaryPlaybackTarget else { return nil }
-        let timeLeft = target.shouldResumeFromOffset ? timeLeftText(for: target.item) : nil
-
-        switch media.type {
-        case .movie, .episode, .clip:
-            return timeLeft
-        case .show, .season:
-            let episodeLabel = seasonEpisodeLabel(for: target.item)
-            if let timeLeft, let episodeLabel {
-                return "\(episodeLabel) • \(timeLeft)"
-            }
-            return episodeLabel ?? timeLeft
+    /// One-line title for compact play buttons: "Play S2 · E1" on a series or season, "Resume" or "Play" otherwise.
+    var primaryActionCompactTitle: String {
+        guard [.show, .season].contains(media.type), let episode = primaryPlaybackTarget?.item.tertiaryLabel else {
+            return primaryActionTitle
         }
+        return String(localized: "media.detail.primaryAction.episode \(primaryActionTitle) \(episode)")
+    }
+
+    /// Time left on the item the play button resumes; nil when it starts from the beginning.
+    var primaryActionRemainingTime: String? {
+        guard let target = primaryPlaybackTarget, target.shouldResumeFromOffset else { return nil }
+        return target.item.shortRemainingTimeText
     }
 
     var primaryActionProgress: Double? {
@@ -664,7 +669,13 @@ final class MediaDetailViewModel {
     }
 
     var showsVersionSelection: Bool {
-        versions.count > 1 || !copies.isEmpty
+        versions.count > 1 || (listsCopiesWithVersions && !copies.isEmpty)
+    }
+
+    /// A series copy is the whole series on another server, not a version of the episode the version menu describes,
+    /// so it goes in the more menu instead.
+    var listsCopiesWithVersions: Bool {
+        media.type != .show
     }
 
     /// Copies grouped by server, in the order of their best copy.
@@ -872,18 +883,19 @@ final class MediaDetailViewModel {
     }
 
     func favoriteActionTitle(for item: MediaItem) -> String {
-        isFavorite(for: item)
-            ? String(localized: "media.detail.favorite.remove")
-            : String(localized: "media.detail.favorite.add")
+        favoriteAction(for: item).title
     }
 
     func favoriteActionIcon(for item: MediaItem) -> String {
-        isFavorite(for: item) ? "star.fill" : "star"
+        favoriteAction(for: item).systemImage
+    }
+
+    private func favoriteAction(for item: MediaItem) -> MediaQuickAction {
+        isFavorite(for: item) ? .removeFavorite : .addFavorite
     }
 
     func shouldShowFavoriteButton(for item: MediaItem) -> Bool {
-        services.capabilities.favorites
-            && [.movie, .series, .season, .episode].contains(item.type)
+        quickActions.canFavorite(item)
     }
 
     var shouldShowWatchlistButton: Bool {
@@ -900,13 +912,15 @@ final class MediaDetailViewModel {
     }
 
     func watchActionTitle(for item: MediaItem) -> String {
-        isWatched(item)
-            ? String(localized: "media.detail.watchAction.markUnwatched")
-            : String(localized: "media.detail.watchAction.markWatched")
+        watchAction(for: item).title
     }
 
     func watchActionIcon(for item: MediaItem) -> String {
-        isWatched(item) ? "checkmark.circle.fill" : "checkmark.circle"
+        watchAction(for: item).systemImage
+    }
+
+    private func watchAction(for item: MediaItem) -> MediaQuickAction {
+        isWatched(item) ? .markUnwatched : .markWatched
     }
 
     func isUpdatingWatchStatus(for item: MediaItem) -> Bool {
@@ -929,27 +943,6 @@ final class MediaDetailViewModel {
     private func hasProgress(for item: MediaItem?) -> Bool {
         guard let viewOffset = item?.viewOffset else { return false }
         return viewOffset > 0
-    }
-
-    private func timeLeftText(for item: MediaItem?) -> String? {
-        guard
-            let item,
-            let duration = item.duration,
-            let viewOffset = item.viewOffset,
-            viewOffset > 0
-        else {
-            return nil
-        }
-
-        let remaining = max(0, duration - viewOffset)
-        guard remaining > 0 else { return nil }
-
-        return String(localized: "media.detail.timeLeft \(remaining.mediaDurationText())")
-    }
-
-    private func seasonEpisodeLabel(for item: MediaItem) -> String? {
-        guard let season = item.parentIndex, let episode = item.index else { return nil }
-        return String(localized: "media.detail.seasonEpisode \(season) \(episode)")
     }
 
     private func fetchSeasons(preservingExistingContent: Bool) async {

@@ -50,8 +50,8 @@ struct ProfileSwitcherView: View {
                 ScrollView {
                     VStack(spacing: 48) {
                         Text("auth.profile.header.title")
-                            .font(.system(size: 40, weight: .bold))
-                            .foregroundStyle(.white)
+                            .font(.heroTitle)
+                            .foregroundStyle(.textPrimary)
 
                         if let error = viewModel.errorMessage {
                             errorBanner(error)
@@ -92,7 +92,7 @@ struct ProfileSwitcherView: View {
                 ProgressView("auth.profile.loading")
             } else {
                 Text("auth.profile.empty")
-                    .foregroundStyle(.white.opacity(0.7))
+                    .foregroundStyle(.textSecondary)
             }
         } else {
             CenteredFlowLayout(spacing: ProfilePickerMetrics.itemSpacing, lineSpacing: 36) {
@@ -130,7 +130,15 @@ struct ProfileSwitcherView: View {
     }
 
     private func pinStage(for choice: ProfileChoice) -> some View {
-        VStack(spacing: 28) {
+        PINEntryPad(
+            title: choice.name,
+            message: viewModel.errorMessage ?? String(localized: "auth.profile.pin.prompt \(choice.name)"),
+            pinCount: viewModel.pin.count,
+            rejectedCount: viewModel.rejectedPINCount,
+            isDisabled: viewModel.switchingID != nil,
+            onDigit: viewModel.appendPINDigit,
+            onDelete: viewModel.deletePINDigit,
+        ) {
             ProfileAvatarView(
                 choice: choice,
                 size: ProfilePickerMetrics.entranceAvatarSize,
@@ -138,36 +146,23 @@ struct ProfileSwitcherView: View {
                 showsBadges: false,
                 namespace: namespace,
             )
-            VStack(spacing: 8) {
-                Text(choice.name)
-                    .font(.title.bold())
-                Text(viewModel.errorMessage ?? String(localized: "auth.profile.pin.prompt \(choice.name)"))
-                    .foregroundStyle(.white.opacity(0.7))
-                    .multilineTextAlignment(.center)
-            }
-            .foregroundStyle(.white)
-
-            PINDotsView(count: viewModel.pin.count)
-                .shake(viewModel.rejectedPINCount)
-
+        } footer: {
             Button("common.actions.cancel", action: viewModel.cancelPIN)
                 .disabled(viewModel.switchingID != nil)
         }
-        .padding(48)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .transition(.opacity)
     }
 
     private func errorBanner(_ message: String) -> some View {
         HStack(spacing: 16) {
             Label(message, systemImage: "exclamationmark.triangle.fill")
-                .foregroundStyle(.white)
+                .foregroundStyle(.textPrimary)
             Button("common.actions.retry") {
                 Task { await viewModel.load() }
             }
         }
         .padding(16)
-        .profileGlass(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .glassSurface(in: RoundedRectangle(cornerRadius: LayoutMetrics.overlayCornerRadius, style: .continuous))
     }
 
     private func handleKey(_ press: KeyPress) -> KeyPress.Result {

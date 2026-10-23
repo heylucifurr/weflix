@@ -84,7 +84,7 @@ struct HomeRowsSettingsView: View {
             HStack(spacing: 24) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(row.title)
-                        .font(.headline)
+                        .font(.rowTitle)
                     rowSubtitle(for: row)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -97,6 +97,15 @@ struct HomeRowsSettingsView: View {
                     }
                     .buttonStyle(.bordered)
                     .settingsFocus("row-\(row.id)-visibility", isDefault: index == 0)
+
+                    Button {
+                        viewModel.setRowStyle(otherStyle(than: viewModel.rowStyle(of: row)), of: row)
+                    } label: {
+                        viewModel.rowStyle(of: row).icon
+                            .accessibilityLabel(Text("settings.interface.homeRows.style"))
+                    }
+                    .buttonStyle(.bordered)
+                    .settingsFocus("row-\(row.id)-style", exitsLeft: false)
 
                     Button {
                         viewModel.moveRow(at: index, by: -1)
@@ -128,6 +137,8 @@ struct HomeRowsSettingsView: View {
                 )) {
                     rowLabel(row)
                 }
+
+                styleMenu(for: row)
 
                 Button {
                     viewModel.moveRow(at: index, by: -1)
@@ -206,7 +217,7 @@ struct HomeRowsSettingsView: View {
                         rowGroupCount(group)
                             .foregroundStyle(.secondary)
                         Image(systemName: "chevron.right")
-                            .font(.caption.weight(.semibold))
+                            .font(.cardMetadata.weight(.semibold))
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -229,7 +240,7 @@ struct HomeRowsSettingsView: View {
                 Text(HomeRowGroupTitle.key(for: group))
                 if let serverName = group.serverName {
                     Text("settings.homeRows.serverSubtitle \(serverName)")
-                        .font(.caption)
+                        .font(.cardMetadata)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -238,6 +249,38 @@ struct HomeRowsSettingsView: View {
         private func rowGroupCount(_ group: HomeRowGroup) -> Text {
             let shown = group.rows.count(where: { viewModel.isRowVisible($0.id) })
             return Text("settings.interface.homeRows.groupCount \(shown) \(group.rows.count)")
+        }
+    #endif
+
+    // MARK: - Style
+
+    #if os(tvOS)
+        private func otherStyle(than style: HomeRowStyle) -> HomeRowStyle {
+            style == .portrait ? .landscape : .portrait
+        }
+    #else
+        private func styleMenu(for row: HomeRow) -> some View {
+            let style = viewModel.rowStyle(of: row)
+            return Menu {
+                Picker(
+                    "settings.interface.homeRows.style",
+                    selection: Binding(
+                        get: { style },
+                        set: { viewModel.setRowStyle($0, of: row) },
+                    ),
+                ) {
+                    ForEach([HomeRowStyle.portrait, .landscape], id: \.self) { option in
+                        Label(option.title, systemImage: option.systemImage).tag(option)
+                    }
+                }
+                .pickerStyle(.inline)
+            } label: {
+                style.icon
+            }
+            .menuIndicator(.hidden)
+            .foregroundStyle(.secondary)
+            .accessibilityLabel(Text("settings.interface.homeRows.style"))
+            .accessibilityValue(Text(style.title))
         }
     #endif
 
@@ -255,7 +298,7 @@ struct HomeRowsSettingsView: View {
     private func rowSubtitle(for row: HomeRow) -> some View {
         if let subtitle = subtitle(for: row) {
             subtitle
-                .font(.caption)
+                .font(.cardMetadata)
                 .foregroundStyle(.secondary)
         }
     }
@@ -275,6 +318,31 @@ struct HomeRowsSettingsView: View {
             .accessibilityLabel(Text(title))
         }
     #endif
+}
+
+private extension HomeRowStyle {
+    var title: LocalizedStringKey {
+        switch self {
+        case .portrait: "settings.interface.homeRows.style.posters"
+        case .landscape: "settings.interface.homeRows.style.thumbnails"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .portrait: "rectangle.portrait"
+        case .landscape: "rectangle"
+        }
+    }
+
+    /// Both symbols take the width of the wider one, so switching style does not shift the buttons beside it.
+    var icon: some View {
+        ZStack {
+            Image(systemName: HomeRowStyle.landscape.systemImage)
+                .hidden()
+            Image(systemName: systemImage)
+        }
+    }
 }
 
 #if !os(tvOS)

@@ -92,7 +92,7 @@ extension PlayerController {
 struct PlaybackOffsetIndicator: View {
     var body: some View {
         Circle()
-            .fill(Color.brandPrimary)
+            .fill(Color.selectionAccent)
             .frame(width: 9, height: 9)
             .overlay(Circle().stroke(Color.black.opacity(0.4), lineWidth: 1))
             .accessibilityHidden(true)
@@ -167,11 +167,7 @@ struct PlaybackOffsetBar: View {
         content
             .padding(.horizontal, horizontalPadding)
             .padding(.vertical, verticalPadding)
-            .background(.black.opacity(0.62), in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .stroke(Color.white.opacity(0.18), lineWidth: 1),
-            )
+            .videoOverlayGlass(in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         #if !os(tvOS)
             // On tvOS the dark scheme already makes text white, and a forced white would stay white on
             // the light focused button background.
@@ -251,7 +247,7 @@ struct PlaybackOffsetBar: View {
         }
         .fontWeight(.semibold)
         #if !os(tvOS)
-            .buttonStyle(.borderedProminent)
+            .actionButtonStyle(.primary)
         #endif
     }
 
@@ -601,8 +597,8 @@ enum PlaybackOffsetControl: String, Hashable {
                 .scaleEffect(isFocused && !configuration.isPressed ? 1.1 : 1)
                 .shadow(color: .black.opacity(isFocused ? 0.35 : 0), radius: 14, y: 8)
                 .opacity(isEnabled ? 1 : 0.35)
-                .animation(.easeOut(duration: 0.15), value: isFocused)
-                .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
+                .animation(Motion.focus, value: isFocused)
+                .animation(Motion.focus, value: configuration.isPressed)
                 .onChange(of: configuration.isPressed) { _, pressed in
                     onPressChanged(pressed)
                 }
