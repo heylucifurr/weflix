@@ -159,9 +159,58 @@ and the root view and need a full three-platform build and a simulator pass — 
 and which leaves the app **exactly as shippable as it is today** (still the placeholder) if it is interrupted. The
 plan's own gate is unchanged: A1–A5 together are what makes the home show movies.
 
-**A2's interface note for whoever continues:** `PlexAPIContext` is created in several places, so the gateway state
-must be established on the context whose `serverAccessSnapshot()` is handed to the session — `selectGateway()` is
-called once, at sign-in, and the flag travels *inside* the snapshot from there. A3 is where that call goes.
+**A3's wiring map, read from the code (do the next session this way, it is all measured):**
+
+- `SessionManager` has `accountStore` (`save(account:token:)`, `setHomeToken(_:accountID:userUUID:)`), `profileStore`
+  (`updatePlexHomeUsers(_:accountID:)`, `setActiveProfile(_:)`) and `registry`. `status` reaches `.ready` **only**
+  through `activate(_:plexHomeToken:)` → `registry.activate(profile:links:)` → `registry.waitForFirstReady` → line
+  229's `status = .ready`. So A3 must not invent a status path: adopt the account, then call `activate`.
+- A gateway account **fits the existing types**, so no enum case is needed: `MediaAccount.plex(PlexAccount(id:
+  "weflix:<user.id>", displayName: user.displayName))`, a `.plexHome(uuid: "weflix:<id>")` link and the profile id
+  from `PlexHomeProfile.id(userUUID:)` — all existing shapes. The `weflix:` prefix is the marker that says *this
+  account is the gateway*, and it is the only thing `ServerRegistry.connectPlex` needs to branch on.
+- **The branch point is `ServerRegistry.connectPlex(_:)` (line ~512)**: today it does
+  `plexToken(link:account:userUUID:)` (which calls plex.tv `/switch`), `context.setAuthToken(token)`,
+  `context.selectServer(resource)`, then `PlexMediaServicesFactory.make(...)` and `markReady(...)`. The gateway path
+  is the same minus the first three: `context.selectGateway(token: storedToken, accountID:, displayName:)`, then the
+  same factory and the same `markReady`. `entry.plexResource` must be the synthetic gateway resource — set where
+  `activate(profile:links:)` (line 149) builds entries.
+- **A4 then removes the placeholder**: `WeFlixAppGate` hands over to `MainTabView`/`MainView` once
+  `sessionManager.status == .ready`, keeping `.checking` for the spinner and `.signedOut` for the sign-in screen.
+
+**Playback — the one thing the plan parked, and what it actually needs (measured 2026-10-24):**
+
+The app builds its media URLs with the credential **in the query string** and hands a bare `URL` to the player:
+
+| Where | Today |
+|---|---|
+| `ImageRepository.transcodeImageURL` | `{server}/photo/:/transcode?X-Plex-Token=…&url=…&width=…` |
+| `MediaRepository` (line 26) | a direct-play URL with `X-Plex-Token` in the query |
+| `PlaybackRepository` (line 153) | `{server}/video/:/transcode/universal/start.m3u8?…&X-Plex-Token=…` |
+
+The gateway **refuses** a client-supplied token (`hasPlexTokenQuery`, pinned by `S2:` tests), and rightly so. So
+gateway mode needs three things, in this order:
+
+1. **Artwork and streams point at WeFlix's own routes instead of Plex paths** — `/api/image?path=…`, `/api/video?
+   path=…&ratingKey=…`, `/api/transcode?path=/video/:/transcode/universal/start.m3u8?…`. All three already accept
+   the app's bearer token (S3), already apply the library rule, and `/api/transcode` already rewrites HLS playlists
+   to strip a token from them. This is the "see movies" half and it is small: three URL builders, gateway branch.
+2. **The player's own request needs a credential it cannot carry in a header.** The player is an
+   `AVPlayer`/`AetherEngine` asset built from a bare URL, and media requests carry no `Authorization` header — which
+   is exactly why the app put the token in the query. The clean answer is a **short-lived stream ticket**: a new
+   `POST /api/app/stream-ticket` (bearer) answering a signed, minutes-long value bound to the account and to nothing
+   else, appended as `?ticket=…` to media URLs only; `lib/session-signature.ts` already has the HMAC helpers, so it
+   needs no table. The long-lived device token must **not** go into a URL.
+3. **The transcode *decision* call** (`PlaybackRepository`, `/video/:/transcode/universal/decision`) is a JSON read
+   that S2 deliberately refused at the gateway ("playback is the next phase"). With playback in scope, add
+   `decision|ping|stop` to `GATEWAY_READ_PATHS` — but **not** `start.m3u8` (which must go through `/api/transcode`,
+   or its segment URLs keep a Plex token) and **not** `library/parts/<id>/<file>` (which must go through
+   `/api/video`).
+
+**Status of the delivery Luther asked for ("sign in and I can see movies and play it"): not met yet.** Today the app
+still shows the placeholder: A1/A2 are in place and tested, but nothing calls `selectGateway`, and A3/A4/A5 plus the
+three steps above are what put posters on the screen and a film behind the Play button.
+
 
 
 Luther, 2026-10-24: *"weflix custom plex is only a skin ui. the real backend is still plex. so basically we strimr
