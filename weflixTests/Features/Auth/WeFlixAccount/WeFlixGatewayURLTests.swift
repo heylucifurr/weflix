@@ -261,6 +261,18 @@ final class WeFlixGatewayURLTests: XCTestCase {
         XCTAssertTrue(melvie.id.contains("weflix:8"))
     }
 
+    func testASessionTheServerRefusedComesBackToTheSignInScreen() {
+        let controller = WeFlixSessionController(store: WeFlixDeviceTokenStore(service: "me.weflix.tests"))
+        controller.reportSignInEnded()
+
+        XCTAssertEqual(controller.status, .signedOut, "the only useful answer to a refused token is the sign-in screen")
+        XCTAssertEqual(
+            controller.errorMessage,
+            "Your WeFlix sign-in has ended. Sign in again.",
+            "and it says what happened instead of leaving a dead home screen",
+        )
+    }
+
     // MARK: - The host (this build's own rule)
 
     func testTheAppTalksToWeFlixAndOnlyWeFlix() {

@@ -136,6 +136,20 @@ final class WeFlixSessionController {
         return status != .signedOut
     }
 
+    /// The server refused this device's token (a `401` from a gateway read, or the account has no token at all).
+    ///
+    /// The app is a WeFlix client with one sign-in, so the only useful answer is the sign-in screen — with a
+    /// sentence that says what happened. Without it the person is left on a home screen reading "Your servers did
+    /// not respond", which is where Luther ended up (2026-10-24) with no way to act on it.
+    ///
+    /// Idempotent, and deliberately not guarded on the current status: it says "this device's session is over",
+    /// which is true whether the app had noticed it yet or not.
+    func reportSignInEnded() {
+        store.clear()
+        errorMessage = "Your WeFlix sign-in has ended. Sign in again."
+        status = .signedOut
+    }
+
     /// Sign out: tell the server, then forget the token locally whether or not it answered.
     func signOut() async {
         guard !isWorking else { return }

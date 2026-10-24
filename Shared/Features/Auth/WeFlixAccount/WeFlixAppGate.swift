@@ -33,6 +33,7 @@ import SwiftUI
 /// | while that call is in flight | `ProfileActivationView`'s spinner |
 struct WeFlixAppGate<Ready: View>: View {
     @Environment(SessionManager.self) private var sessionManager
+    @Environment(ServerRegistry.self) private var registry
     @State private var session = WeFlixSessionController()
     /// The platform's own main UI — iOS's tabs, macOS's and tvOS's library roots. Shown only when the library is up.
     @ViewBuilder private let ready: () -> Ready
@@ -54,6 +55,24 @@ struct WeFlixAppGate<Ready: View>: View {
             .task(id: session.status) {
                 await adopt()
             }
+            // A WeFlix sign-in that the server no longer accepts comes back to the sign-in screen with a sentence
+            // instead of leaving the person on a home screen that says the server did not respond.
+            .onChange(of: weflixSignInHasEnded, initial: true) { _, hasEnded in
+                guard hasEnded else { return }
+
+                session.reportSignInEnded()
+            }
+    }
+
+    /// Has the server refused the WeFlix account's token? (`ServerRegistry` marks the link `.needsReauthentication`
+    /// when a request is answered `401`, and when the account has no token to connect with at all.)
+    private var weflixSignInHasEnded: Bool {
+        guard let account = sessionManager.accounts.first(where: {
+            $0.plexAccount.map(WeFlixGatewayAccount.isGateway) == true
+        })
+        else { return false }
+
+        return registry.linkStatuses[account.id] == .needsReauthentication
     }
 
     @ViewBuilder
