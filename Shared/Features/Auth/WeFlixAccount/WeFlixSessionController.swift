@@ -198,6 +198,18 @@ final class WeFlixSessionController {
         status = .signedOut
     }
 
+    /// The server refused a read **because this WeFlix does not have the app's library yet** (2026-10-25).
+    ///
+    /// Not a sign-out, and deliberately not treated as one: the token works, `GET /api/app/me` answered with this
+    /// account's own name a moment ago, and the only thing wrong is that the deployment is behind the app. So the
+    /// person stays signed in — the signed-in card shows who they are and offers Sign Out — with a sentence that
+    /// says whose problem it is. Before this, the same refusal was reported as *"Your WeFlix sign-in has ended"*,
+    /// which was false and sent people round the sign-in loop.
+    func reportServerHasNoLibrary() {
+        requests = nil
+        errorMessage = "This WeFlix server doesn't have the app's library yet. Ask Luther to update WeFlix."
+    }
+
     /// Sign out: tell the server, then forget the token locally whether or not it answered.
     func signOut() async {
         guard !isWorking else { return }

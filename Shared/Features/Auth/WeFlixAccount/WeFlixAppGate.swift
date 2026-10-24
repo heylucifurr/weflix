@@ -74,15 +74,18 @@ struct WeFlixAppGate<Ready: View>: View {
             // instead of leaving the person on a home screen that says the server did not respond. Two sources: the
             // gateway marks its link `.needsReauthentication` on a `401`, and the requests proxy posts
             // `.weflixSignInEnded` from the one place its calls are validated.
+            //
+            // **A refused gateway is not automatically an ended sign-in** (2026-10-25): a WeFlix that does not
+            // have the app's library *at all* refuses every read with the same `401`, and telling somebody their
+            // sign-in has ended — when they just signed in and `GET /api/app/me` answered with their own name —
+            // is a lie that loops. `handleGatewayRefusal()` tells the two apart before saying anything.
             .onChange(of: weflixSignInHasEnded, initial: true) { _, hasEnded in
                 guard hasEnded else { return }
 
-                seerrStore.clear()
-                session.reportSignInEnded()
+                Task { await handleGatewayRefusal() }
             }
             .onReceive(NotificationCenter.default.publisher(for: .weflixSignInEnded)) { _ in
-                seerrStore.clear()
-                session.reportSignInEnded()
+                Task { await handleGatewayRefusal() }
             }
             // The server's answer about requests is what the Seerr tab and the requests screens hang on, so it is
             // taken as it arrives — at launch, and again after a password sign-in. It changes nothing about what
@@ -104,6 +107,56 @@ struct WeFlixAppGate<Ready: View>: View {
         if case .signedIn = session.status { return false }
 
         return true
+    }
+
+    /* ---------------------------------------------------------------------- */
+    /* a refused gateway, told apart from an ended sign-in                      */
+    /* ---------------------------------------------------------------------- */
+
+    /// The server refused a read. **Two very different situations look identical from here** (2026-10-25):
+    ///
+    /// | What happened | What it means | What the app says |
+    /// |---|---|---|
+    /// | the token is over, or the account may not watch (a **pending** or **disabled** account) | the sign-in really is finished | *"Your WeFlix sign-in has ended. Sign in again."* |
+    /// | this WeFlix has **no app library at all** — production before the gateway work was merged | the sign-in is fine; the *deployment* is behind | *"This WeFlix server doesn't have the app's library yet. Ask Luther to update WeFlix."* — and the person stays signed in |
+    ///
+    /// The discriminator is the app's own endpoint: `/api/app/stream-ticket` exists on every WeFlix that has the
+    /// app's library and answers **`404`** on every WeFlix that does not (`WeFlixAuthError.serverNeedsUpdate`,
+    /// which the sign-in client already produces for exactly this reason). A `401` there means the endpoint is
+    /// present and the *token* was refused — the sign-in really has ended, which is the old behaviour and stays.
+    ///
+    /// Luther, 2026-10-25, after signing in on production: *"it says your signin has ended. sign in again."* — he
+    /// had just signed in successfully, so that sentence was false.
+    private func handleGatewayRefusal() async {
+        seerrStore.clear()
+
+        if await serverHasNoAppLibrary() {
+            session.reportServerHasNoLibrary()
+
+            return
+        }
+
+        session.reportSignInEnded()
+    }
+
+    /// Does this WeFlix answer `/api/app/stream-ticket` at all? `true` means it predates the app's library.
+    ///
+    /// A refusal for any other reason — a `401` (the token is over), or no network at all — answers `false`, so
+    /// the app keeps the old, honest behaviour instead of inventing a deploy gap out of a train tunnel.
+    private func serverHasNoAppLibrary() async -> Bool {
+        guard let token = WeFlixDeviceTokenStore().token() else { return false }
+
+        do {
+            // The ticket itself is discarded: asking is the whole point, and the app fetches one anyway when it
+            // adopts the account.
+            _ = try await WeFlixAuthClient().streamTicket(token: token)
+
+            return false
+        } catch WeFlixAuthError.serverNeedsUpdate {
+            return true
+        } catch {
+            return false
+        }
     }
 
     /// Has the server refused the WeFlix account's token? (`ServerRegistry` marks the link `.needsReauthentication`
@@ -137,7 +190,14 @@ struct WeFlixAppGate<Ready: View>: View {
                 ProfileActivationView(profile: profile)
                     .transition(.profileActivation)
             } else {
-                WeFlixSignedInView(user: user, isWorking: session.isWorking) {
+                WeFlixSignedInView(
+                    user: user,
+                    isWorking: session.isWorking,
+                    // The one sentence that belongs on this card: a WeFlix that does not have the app's library
+                    // yet (`reportServerHasNoLibrary()`). The sign-in itself is fine, so this is not the sign-in
+                    // screen.
+                    notice: session.errorMessage,
+                ) {
                     Task {
                         await session.signOut()
                         // The account, its link and its token go with the sign-out: leaving them behind is how a

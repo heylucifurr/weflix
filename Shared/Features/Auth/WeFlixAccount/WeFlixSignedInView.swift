@@ -6,9 +6,14 @@ import SwiftUI
 /// WeFlix server in the next step, and until they exist there is nothing honest to draw but the account's own
 /// name and a way out. Saying "signed in as …" is not a stand-in for a feature: it is the proof that the token
 /// works, that `GET /api/app/me` answered, and that the Keychain survived the launch.
+///
+/// `notice` is the one sentence that can appear here (2026-10-25): *"This WeFlix server doesn't have the app's
+/// library yet. Ask Luther to update WeFlix."* — the case where the sign-in is fine and the **deployment** is
+/// behind. It belongs on this card rather than on the sign-in form, because the person is still signed in.
 struct WeFlixSignedInView: View {
     let user: WeFlixUser
     let isWorking: Bool
+    var notice: String?
     let onSignOut: () -> Void
 
     @FocusState private var signOutIsFocused: Bool
@@ -34,6 +39,14 @@ struct WeFlixSignedInView: View {
                     .font(.bodyText)
                     .foregroundStyle(.textSecondary)
                     .multilineTextAlignment(.center)
+
+                if let notice {
+                    Text(notice)
+                        .font(.bodyText)
+                        .foregroundStyle(.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: 420)
+                }
             }
 
             Spacer(minLength: 0)

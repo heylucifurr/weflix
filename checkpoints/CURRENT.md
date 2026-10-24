@@ -1,4 +1,52 @@
-## CORRECTION — the dead end I shipped, and what is back (2026-10-25, Cline)
+## CORRECTION 2 — "your signin has ended" is the *deployment*, not the sign-in (2026-10-25, Cline)
+
+**Luther, after the previous correction:** *"it says your signin has ended. sign in again."*
+
+**Measured, and it is not the app.** `weflix.me` (production) is built from `main`, and `main` **never received
+the PHASE APP-GATEWAY server work**:
+
+```text
+origin/main = 5428f0e "Merge pull request #4 from heylucifurr/Development"
+  S1 ccda26b (the gateway accepts the app's bearer token)  -> NOT an ancestor of main
+  S5 a7f6fde (the stream ticket)                           -> NOT an ancestor of main
+  S6 01fdff7 (the client's own read keys)                  -> NOT an ancestor of main
+
+production routes:   /api/app/me -> 401        (the sign-in phase IS deployed)
+                     /api/app/auth/login -> 405
+                     /api/app/stream-ticket -> 404   <-- the gateway phase is not
+                     /api/plex/identity -> 401
+```
+
+So on production the app **signs in fine** and then every library read is refused, `ServerRegistry` marks the link
+`.needsReauthentication`, and the app said **"Your WeFlix sign-in has ended. Sign in again."** — which is false:
+the person had just signed in and `GET /api/app/me` had answered with their own name. This behaviour predates this
+task (it came in `e54a22b`, 2026-10-24) and it is the same gap a previous session already recorded in
+`c617662` — *"the production deploy gap that blocks the app … the merge is the one action that makes the app work
+against production. Agents do not merge to `main` — this is Luther's call."*
+
+### The fix: the app no longer blames the sign-in for a deploy gap
+
+`WeFlixAppGate.handleGatewayRefusal()` tells the two apart before saying anything, and the discriminator is the
+app's own endpoint — `/api/app/stream-ticket`, which exists on every WeFlix that has the app's library and answers
+`404` on every WeFlix that does not (measured above; the route itself only ever answers `401` or `200`, so a `404`
+can only mean "not deployed"):
+
+| What the server did | What the app says |
+|---|---|
+| `401` on the gateway, `/api/app/stream-ticket` **present** — a revoked token, or a **pending/disabled** account | *"Your WeFlix sign-in has ended. Sign in again."* (unchanged, and still right) |
+| `401` on the gateway, `/api/app/stream-ticket` **404** — this WeFlix has no app library at all | *"This WeFlix server doesn't have the app's library yet. Ask Luther to update WeFlix."* — **and the person stays signed in**, on the signed-in card, with Sign Out |
+
+A network failure, or any refusal other than a `404`, keeps the old behaviour, so a train tunnel cannot be
+mistaken for a deploy gap. `WeFlixSignedInView` gained an optional `notice` so that sentence has somewhere to
+live (the sign-in form is the wrong place: the person is still signed in).
+
+**This does not make the library work on production** — nothing in the app can, because the server side is not
+deployed there. It stops the app from saying something untrue and from looping. Making it work is the
+`Development → main` merge, which is Luther's call and was not made.
+
+Gate: iOS simulator **BUILD SUCCEEDED** · tvOS **BUILD SUCCEEDED** · macOS **BUILD SUCCEEDED** (0 errors each) ·
+`xcodebuild test -scheme weflix-macOS` **TEST SUCCEEDED, exit 0**.
+
 
 **Luther, minutes after the previous entry was pushed:** *"what the hell happened?? this is wrong
 implimentation. when i sign it says Request arent setup for this account .... THIS IS WRONG. put back the previous
