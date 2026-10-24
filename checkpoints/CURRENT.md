@@ -1,3 +1,112 @@
+## PHASE APP-GATEWAY — A1–A5: the sign-in becomes a library, proved on a simulator (2026-10-24, Cline)
+
+**Luther:** *"proceed everything. my expected delivery is when I sign in I can see movies and play it."* The
+server's S1–S5 are recorded in `plex-custom-frontend/checkpoints/CURRENT.md` (S5 pushed this session, live on beta).
+
+### State
+
+| Task | What it is | Done |
+|---|---|---|
+| A1 | `WeFlixServer.gatewayPath/gatewayBaseURL/gatewayMachineIdentifier`, `ServerAccessSnapshot.speaksToGateway`, bearer header in gateway mode | `2fe9748` |
+| A2 | `PlexAPIContext.selectGateway(token:accountID:displayName:)` — the Plex-shaped state built from one host, **no plex.tv call** | `2fe9748` |
+| A3 | the sign-in is adopted into the app's own account/profile model and activated | `3cf4f06`, `460ed00` |
+| A4 | the gate hands the screen to the platform's own library UI once the profile is `.ready` | `3cf4f06`, `460ed00` |
+| A5 | no live gateway path can reach plex.tv — enforced, not merely intended | `3cf4f06` (started), this session (finished) |
+| — | artwork through `/api/image` with **no credential in the URL** | `3cf4f06` |
+| — | direct plays through `/api/video` and streams through `/api/transcode`, carrying the **stream ticket** | `3cf4f06` |
+
+| File | What it is |
+|---|---|
+| `Shared/Features/Auth/WeFlixAccount/WeFlixGatewayAccount.swift` | **New.** The `weflix:` marker and the two things built from it: the account (`MediaAccount.plex(PlexAccount(id: "weflix:<id>"))`), the one server (`WeFlixGatewayAccount.server`), and `isGateway(_:)`, which is what `ServerRegistry` and `SessionManager` branch on before any plex.tv step. |
+| `Shared/Features/Auth/WeFlixAccount/WeFlixGatewayURL.swift` | **New.** The three gateway URLs in one place: `/api/image?path=…&size=…`, `/api/video?path=…&ratingKey=…`, `/api/transcode?path=<whole Plex path>`. Plus the five-size mapping the image route accepts (a 2:3 poster is width ÷ height ≈ 0.67 — got that wrong first, and a test caught it). |
+| `Shared/Features/Auth/WeFlixAccount/WeFlixStreamTicketCache.swift` | **New.** The ticket, with a synchronous read (the URL builders are sync) and an asynchronous refresh, refreshed 60 s before expiry so a play starting at T−1 s still has one. |
+| `Shared/Session/SessionManager.swift` | `adoptWeFlixAccount(user:token:)`: account + link + token, then the app's own `activate → waitForFirstReady` path; `forgetWeFlixAccount()`; and A5's guards (`isWeFlixAccount`, the Home-user refresh, the switch, the server list). |
+| `Shared/Session/ServerRegistry.swift` | `resolvePlex`/`connectPlex` branch on the marker **before** the two plex.tv-only steps; `resolveGateway()` adds the one server, `connectGateway()` connects it through `selectGateway()`. |
+| `Shared/Features/Auth/WeFlixAccount/WeFlixAppGate.swift` | The handover: adopt on `.signedIn`, then `ready()` (the platform's own UI) once `SessionManager` is `.ready`; the app's activation screen while hydrating. |
+| `Shared/Repository/Plex/ImageRepository.swift`, `MediaRepository.swift`, `PlaybackRepository.swift` | The three gateway branches. |
+| `Shared/Offline/Artwork/CachedArtworkService.swift` | Artwork from `weflix.me` is loaded with a `URLSession` request carrying the bearer token — **which is why the image URL holds no credential at all**. |
+| `Shared/Networking/Plex/PlexCloudNetworkClient.swift`, `PlexAPIContext.swift` | A5: `selectGateway` clears the plex.tv token, and a cloud client with no token refuses **before building a URL**. |
+| `weflix-iOS/Features/ContentView.swift`, `weflix-macOS/ContentView.swift`, `weflix-tvOS/ContentView.swift` | Each passes its own library UI into the gate (`MainTabView` / `MainView`); each keeps its old Plex/Jellyfin root, unreachable. |
+| `weflixTests/Features/Auth/WeFlixAccount/WeFlixGatewayURLTests.swift` | **New.** 11 cases: the marker, the five image sizes, both playback URLs, the ticket's expiry margin, the host — and A5's three (a gateway context holds no plex.tv token; a token-less cloud client refuses before sending; the one server has no connections and no token). |
+| `weflix.xcodeproj` | The three new `Shared` files added to the **tvOS** target's explicit list. |
+
+### The delivery, measured on an iPhone 17 Pro simulator against beta
+
+The point of the whole phase was *"when I sign in I can see movies and play it"*, so it was run, not argued:
+
+```text
+launch app (SIMCTL_CHILD_WEFLIX_BASE_URL=https://beta.weflix.me)
+  → signed in as the stored token's owner ("Lucifurr")
+  → plist of the app's container, after the handover:
+      weflix.accounts.v1  [{"plex":{"_0":{"displayName":"Lucifurr","id":"weflix:2"}}}]        ← the marker
+      weflix.profiles.v1  links: [{"profileID":"local.0197…","accountID":"plex:weflix:2",
+                                  "user":{"plexHome":{"uuid":"weflix:2"}}}]                   ← the link
+                          activeProfileID: local.0197…                                        ← activated
+  → the snapshot of the screen:
+      tabs     Home · Libraries · Search                    (MainTabView — the handover happened)
+      hublines Continue Watching · Recently Added in Anime · Recently Added in Movies
+      items    Animals · Matchbox the Movie · VisionQuest   ("1 hr, 46 min. left")
+               Theseus (S1 · E2 · 43 min. left), SPY x FAMILY, Daemons of the Shadow Realm (38)
+```
+
+And the playback URLs the app builds, fetched for real (the server side of the same evidence):
+
+```text
+GET /api/video?path=/library/parts/8973/1771860598/file.mkv&ratingKey=4292&ticket=<ticket>
+      -> 200   3348196822 bytes   video/x-matroska        ← a real film, through weflix.me, ticket only
+GET /api/video?…&ticket=<ticket>x                -> 401
+GET /api/plex/library/sections?ticket=<ticket>    -> 401   ← a ticket is not a way into the gateway
+```
+
+**What is not yet proved by a tap:** starting a film *from the UI*. This harness exposes no tap/type tool, and the
+Mac's `osascript` keystroke permission is refused, so the app's own play button could not be pressed. What is proved
+instead: the library renders, the account/profile/activation state is exactly the designed one, and the media URL
+the player is handed answers `200` with 3.1 GB of a real film. Playback *inside the app* is the one thing Luther
+should confirm by tapping once.
+
+### Two findings worth keeping
+
+- **An unsigned simulator build cannot use the Keychain.** With `CODE_SIGNING_ALLOWED=NO` the app has no
+  `application-identifier`, so every `SecItemAdd` fails and `WeFlixDeviceTokenStore.token()` is always `nil` — which
+  looked exactly like "the stored token was refused". The run above is an **ad-hoc signed** build
+  (`CODE_SIGN_IDENTITY=-`), and that is why the token was finally read. *(Both problems this session — this one and
+  the `.task(id:)` handover that never fired because `adopt()` returned early on that nil token — presented as
+  "stuck on the signed-in card".)*
+- **A gateway account must not reach plex.tv.** It could: `UserRepository`/`ResourceRepository` build a
+  `PlexCloudNetworkClient` (`https://plex.tv/api/v2`, `discover.provider.plex.tv`) from `context.authTokenCloud`,
+  which `setAuthToken` had set to the **WeFlix device token** — a plex.tv request carrying the wrong credential.
+  A5 closes it in two places: `selectGateway` clears the cloud token, and the cloud client refuses to build a
+  request without one. Three tests pin it.
+
+### Gate (measured, this Mac)
+
+macOS app **0 errors**, iOS app **0 errors**, tvOS app **0 errors** (the tvOS target needed the three new files in
+its list); `weflixTests/WeFlixGatewayURLTests` **11/11 pass, exit 0** (three of them A5's); the suite compiles and
+runs against the same `Shared/` sources on all three platforms.
+
+### Ledger
+
+- **Ruling: a WeFlix account is recorded as `MediaAccount.plex` with a `weflix:` marker.** `LinkedUser` has no
+  WeFlix case, and adding one would have touched every exhaustive `switch` in the session layer.
+  *Cost if wrong:* the marker is a string prefix — one `isGateway()` function asks the question in one place, and
+  two tests pin that a real plex.tv account is never treated as a WeFlix one.
+- **Ruling: artwork carries no credential at all.** It is loaded by `CachedArtworkService` with `URLSession`, which
+  *can* send the bearer header, so the URL needs no ticket — unlike playback, where `AVPlayer` cannot send one.
+  *Cost if wrong:* an image request from that one loader authenticates with a header; everything else about the URL
+  is unchanged.
+- **Ruling: `WEFLIX_BASE_URL` (https only) and `WEFLIX_TEST_IDENTIFIER`/`_PASSWORD` exist for proving a build.**
+  Beta has the routes before production does, and a simulator with no keyboard automation cannot type a sign-in.
+  The credentials are read **only when there is no stored token**, and nothing shipped sets them.
+  *Cost if wrong:* neither variable exists in a normal launch's environment, so neither path runs.
+- **Process: never `git add -A` in this repository** (Luther works in the tree — the lesson from `d4a6370`). Every
+  commit this session staged explicit paths and printed `git diff --cached --name-only` first.
+- **Disk: this Mac reached 100% and builds started failing with `No space left on device`.** Only regenerable
+  caches were removed — Xcode's `ModuleCache.noindex` and `SDKExplicitPrecompiledModules`, the SwiftPM cache, and
+  user caches (`~/.Library/Caches/{pip,Homebrew,Google,Adobe,com.github.CopilotForXcode,com.github.GitHubClient.ShipIt,…}`)
+  — never sources, and not Luther's project `DerivedData` (only its `Build/` products). ~4 GB free afterwards.
+
+
+
 # CURRENT checkpoint — WeFlix Apple client
 
 ## STEP 1 — the app signs in to WeFlix (2026-10-24, Cline)
