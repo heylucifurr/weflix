@@ -11,8 +11,8 @@ server half of this feature**. Measured, not assumed:
 ```text
 prod  https://weflix.me/api/health                      -> commit 5428f0ea…      (main was not merged)
 prod  /api/app/seerr/api/v1/search                      -> 404                   (the route does not exist there)
-beta  https://beta.weflix.me/api/health                 -> commit 940fc3a…
-beta  /api/app/seerr/api/v1/search                      -> 401                   (the route exists)
+beta  the pre-production deployment's /api/health        -> commit 940fc3a…
+beta  the pre-production deployment's seerr search       -> 401                   (the route exists)
 ```
 
 So on production `GET /api/app/me` carries no `requests` block, it decoded as `nil`, and one flag collapsed
