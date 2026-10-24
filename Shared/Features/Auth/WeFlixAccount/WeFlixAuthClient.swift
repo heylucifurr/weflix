@@ -18,6 +18,12 @@ enum WeFlixAuthError: Error, Equatable {
     case unauthenticated
     /// The server refused, and said why, in words meant for a person.
     case refused(String)
+    /// `404` — the server is reachable and does not know this route.
+    ///
+    /// This is not a hypothetical: production (`weflix.me`) is deployed from `main`, so a `/api/app` route that
+    /// only exists on `Development` answers exactly this until the two are merged, and the app would otherwise
+    /// tell the person to check a connection that is perfectly fine.
+    case serverNeedsUpdate
     /// The app could not reach WeFlix at all.
     case unreachable
 
@@ -31,6 +37,8 @@ enum WeFlixAuthError: Error, Equatable {
             "Please sign in again."
         case let .refused(message):
             message
+        case .serverNeedsUpdate:
+            "This WeFlix server does not have the app's sign-in yet. Ask Luther to update WeFlix."
         case .unreachable:
             "Can't reach WeFlix. Check your connection and try again."
         }
@@ -205,6 +213,9 @@ struct WeFlixAuthClient {
             }
 
             throw WeFlixAuthError.unauthenticated
+        case 404:
+            // Reachable, and it does not know this route — production lagging `Development`, not a dead network.
+            throw WeFlixAuthError.serverNeedsUpdate
         default:
             // Every other refusal the app can act on carries the server's own sentence; a 502 from a proxy in
             // front of a restarting container carries nothing readable, which is the `unreachable` answer.

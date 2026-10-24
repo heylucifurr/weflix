@@ -30,6 +30,25 @@ struct WeFlixLiveAuthTests {
         ProcessInfo.processInfo.environment["WEFLIX_LIVE_TESTS"] == "1"
     }
 
+    /**
+     * The deployment the live tests talk to. Defaults to the app's own server — which is what they are for — with
+     * `WEFLIX_TEST_BASE_URL` as a way to point them elsewhere.
+     *
+     * It exists because the two deployments are not always at the same commit: production (`weflix.me`) is
+     * deployed from `main`, so a route that only exists on `Development` answers **404** there until Luther
+     * merges. Testing the client against `https://beta.weflix.me` while that is true proves the client;
+     * pretending production answered would not.
+     */
+    private static var baseURL: URL {
+        let configured = ProcessInfo.processInfo.environment["WEFLIX_TEST_BASE_URL"] ?? ""
+
+        return URL(string: configured) ?? WeFlixServer.baseURL
+    }
+
+    private static func client() -> WeFlixAuthClient {
+        WeFlixAuthClient(baseURL: baseURL)
+    }
+
     private static var account: (identifier: String, password: String)? {
         let environment = ProcessInfo.processInfo.environment
         guard let identifier = environment["WEFLIX_TEST_IDENTIFIER"], !identifier.isEmpty,
@@ -48,7 +67,7 @@ struct WeFlixLiveAuthTests {
     func theRealServerRefusesAnIdentifierItDoesNotKnowInItsOwnWords() async throws {
         // An identifier nobody owns, with a real password-shaped value: the server runs the argon2id comparison
         // against a dummy hash and answers the one sentence that must not reveal whether the account exists.
-        let client = WeFlixAuthClient()
+        let client = Self.client()
 
         var message: String?
 
@@ -66,7 +85,7 @@ struct WeFlixLiveAuthTests {
 
     @Test(.enabled(if: live))
     func aTokenTheServerHasNeverSeenIsUnauthenticated() async throws {
-        let client = WeFlixAuthClient()
+        let client = Self.client()
 
         await #expect(throws: WeFlixAuthError.unauthenticated) {
             try await client.me(token: Self.unknownToken)
@@ -77,13 +96,13 @@ struct WeFlixLiveAuthTests {
     func loggingOutATokenThatWasNeverRealIsStillAnswered() async throws {
         // The server answers 200 for a token it never knew — logout is idempotent, which is what lets the app
         // forget the Keychain copy without asking the network's permission.
-        try await WeFlixAuthClient().signOut(token: Self.unknownToken)
+        try await Self.client().signOut(token: Self.unknownToken)
     }
 
     @Test(.enabled(if: live && account != nil))
     func aRealAccountSignsInIsRecognisedAndCanSignOut() async throws {
         let account = try #require(Self.account)
-        let client = WeFlixAuthClient()
+        let client = Self.client()
 
         // 1. sign in — the one time the token exists in full.
         let signedIn = try await client.signIn(

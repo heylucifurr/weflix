@@ -110,6 +110,18 @@ struct WeFlixAuthClientTests {
         }
     }
 
+    @Test func a404IsNotBlamedOnTheNetwork() async throws {
+        // Production (`weflix.me`) is deployed from `main`: until a `/api/app` route is merged there it answers
+        // 404, and "check your connection" would be a lie about a connection that works.
+        let notDeployed = Self.client(StubURLProtocol.text(404, "<html>404</html>"))
+
+        await #expect(throws: WeFlixAuthError.serverNeedsUpdate) {
+            try await notDeployed.signIn(identifier: "luther@example.com", password: "correct horse")
+        }
+
+        #expect(WeFlixAuthError.serverNeedsUpdate.message.contains("does not have the app's sign-in"))
+    }
+
     @Test func noNetworkAtAllIsUnreachableInPlainWords() async throws {
         let offline = Self.client(StubURLProtocol.failure(URLError(.notConnectedToInternet)))
 
@@ -177,7 +189,7 @@ struct WeFlixAuthClientTests {
     /* ---------------------------------------------------------------------- */
 
     @Test func theAppHasExactlyOneServerAndItIsWeFlix() {
-        #expect(WeFlixServer.baseURL.absoluteString == "https://beta.weflix.me")
+        #expect(WeFlixServer.baseURL.absoluteString == "https://weflix.me", "production, not the beta test site")
         #expect(WeFlixServer.loginPath == "api/app/auth/login")
         #expect(WeFlixServer.mePath == "api/app/me")
         #expect(WeFlixServer.logoutPath == "api/app/auth/logout")

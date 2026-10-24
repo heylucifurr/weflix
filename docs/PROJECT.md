@@ -15,7 +15,7 @@ two-repository product**:
 
 | Repository | What it is |
 |---|---|
-| `plex-custom-frontend` (`weflix.me`, beta: `beta.weflix.me`) | the WeFlix **server**: accounts, sessions, the Plex connection, the playback decision engine, watch state, the web UI. Next.js, PostgreSQL. |
+| `plex-custom-frontend` (`weflix.me` — production, deployed from `main`; beta: `beta.weflix.me`, deployed on every push to `Development`; both share one database) | the WeFlix **server**: accounts, sessions, the Plex connection, the playback decision engine, watch state, the web UI. Next.js, PostgreSQL. |
 | **this repository** (`weflix`) | the native **client**: sign-in, and (next) home, libraries, search, player. Swift, SwiftUI. |
 
 ## 2. The one hard rule

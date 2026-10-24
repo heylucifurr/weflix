@@ -7,15 +7,21 @@ import Foundation
 /// The one place the WeFlix server's address lives.
 ///
 /// WeFlix is a native client of the **WeFlix server** now: it talks to this host and to nothing else. It never
-/// contacts plex.tv and never talks to a Plex or Jellyfin server directly — the server holds the Plex token and
-/// does all of that on the account's behalf (see `docs/PROJECT.md`).
+/// contacts plex.tv and never talks to a Plex or Jellyfin server directly — the server holds the Plex token (its
+/// own Plex backend lives at `plex.weflix.me`, which the app never addresses) and does all of that on the
+/// account's behalf (see `docs/PROJECT.md`).
 ///
 /// Everything the app needs — the address, and the three paths it calls — is here rather than spread across the
-/// sign-in code, so pointing the app at a different deployment (production `weflix.me`, or a local one) is a
-/// one-line change in one file.
+/// sign-in code, so pointing the app at a different deployment is a one-line change in one file.
+///
+/// **`https://weflix.me` is production, and it is what the app ships with** (Luther, 2026-10-24).
+/// `https://beta.weflix.me` is the test site he redeploys on every push to `Development`; both deployments share
+/// the same database, so an account works on either. The app does not fall back from one to the other: a client
+/// that quietly talks to a different server than the one it was built for is worse than one that says it cannot
+/// reach it.
 enum WeFlixServer {
     /// The WeFlix server this app is built against. **The only host the app ever contacts.**
-    static let baseURL = URL(string: "https://beta.weflix.me")!
+    static let baseURL = URL(string: "https://weflix.me")!
 
     /// `POST` — a WeFlix account signs this device in. Answers a bearer token, once.
     static let loginPath = "api/app/auth/login"
