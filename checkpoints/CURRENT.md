@@ -1,4 +1,129 @@
-## PHASE APP-GATEWAY — the second report: no posters, and "server unavailable" (2026-10-24, Cline)
+## PHASE APP-REQUESTS — sign in, and the requests are already there (2026-10-25, Cline)
+
+**The delivery:** *"A friend installs the WeFlix app, signs in with their WeFlix account, and can browse requests
+and request movies/shows immediately, with no setup."* The client half is in `a23a421`; the server half is in the
+other repository's `578cc6f` (see its `checkpoints/CURRENT.md`).
+
+### What changed, in one paragraph
+
+The **main screen after sign-in is the requests**, not the library. It used to be the library, which needed a
+`SessionManager` that had adopted a Plex-shaped account and connected a server; now it is the thing a friend can
+actually use — the existing discover/search experience, a title's details, the request sheet, the requests list
+and the quota — with **Sign Out** in the toolbar (iOS, iPadOS, macOS) or on a Settings tab (tvOS).
+`GET /api/app/me` answers a new `requests` block (`enabled`, the account's Overseerr user id, the permission bits
+the server grants), and `SeerrStore.adopt()` is the one thing that turns the requests UI on. Library browsing is
+a later task, and `MainTabView`/`MainView` stay compiled and unreachable, exactly as they were.
+
+### The app holds no Overseerr credential, address or session
+
+`SeerrNetworkClient` speaks to `WeFlixServer.seerrBaseURL` — `https://weflix.me/api/app/seerr` — with the device's
+WeFlix bearer token. The server adds the Overseerr address, the API key and `X-API-User`, and decides who the call
+acts as. Four things were **deleted** rather than left unreachable, because leaving them would be a trap:
+
+| Deleted | What it did |
+|---|---|
+| `Shared/Features/Integrations/SeerrSessionService.swift` | validated an Overseerr address, ran the Plex/local/Jellyfin sign-ins, deleted Seerr cookies on sign-out |
+| `Shared/Features/Integrations/SeerrViewModel.swift` | the setup screen's model: a base-URL field and three sign-in methods |
+| `Shared/Repository/Seerr/SeerrAuthRepository.swift` | `/status`, `/auth/plex`, `/auth/local`, `/auth/jellyfin`, `/auth/me` — replaced by `SeerrAccountRepository` (the quota read, and nothing else) |
+| `Shared/Models/Seerr/SeerrAuthRequests.swift` | the three auth bodies |
+
+The five remaining Seerr repositories **no longer take a base URL at all** (`init(session:)`), so there is nowhere
+left to point them, and `SeerrStore.baseURLString` — a `UserDefaults`-backed, user-editable address — is now
+`SeerrStore.baseURL`, a computed constant. `SeerrRequestFormatting.avatarURL` no longer builds a URL out of the
+base either: Overseerr's relative `/avatar/…` path is `nil` now, because an image request cannot carry the token
+and *nothing calls Overseerr directly*. (Absolute avatars — TMDB, Gravatar — still load.)
+
+### Errors a person can act on
+
+`SeerrAPIError` gained `.signInAgain`, `.unreachable` and `.refused(sentence)`, and one `seerrSentence()` replaced
+five copies of the same `integrations.seerr.error.connection` switch. A `409` now reads **"Requests aren't set up
+for your account yet. Ask Luther."** (the server's own sentence), an already-requested title reads as Overseerr's
+own words, a quota refusal as its own, and a `401` is "Please sign in again." — and it posts `.weflixSignInEnded`,
+which `WeFlixAppGate` turns into the sign-in screen, because a `401` from the proxy means the *whole app* is
+signed out, not just that screen.
+
+### Settings, and the licence
+
+`Settings → Integrations → Requests` is now read-only: **"Connected via WeFlix"** (or *not set up for your
+account yet*) plus the account's own quota. The address field, the "start setup" button, the three sign-in methods
+and the Seerr sign-out are gone — signing out of WeFlix is the app's only sign-out and lives on the main screen.
+
+**GPL-3.0:** `README.md` carries *"WeFlix for Apple is a modified version of Strimr by wunax
+(https://github.com/wunax/strimr), licensed GPL-3.0. Modified by Luther, 2026."*, and the same notice is now
+inside the app, at **Settings → Licences** (`Shared/Features/Settings/LicencesView.swift`, and a `licences`
+category in tvOS's settings sidebar). `LICENSE` and every original Strimr notice are untouched.
+
+### The test site's address is gone from this repository
+
+Searched and replaced **every** occurrence of it and of the Plex backend's hostname (seven: two in
+`Shared/Config/WeFlixServer.swift`, one in `docs/PROJECT.md`, one in `weflixTests/…/WeFlixLiveAuthTests.swift`,
+three in this file). Both are now referred to by name and never by address — including in this entry, which had to
+be fixed twice while being written. The command and its (empty) output are in the report.
+
+### Gate
+
+| Target | Command | Result |
+|---|---|---|
+| iOS simulator | `-scheme weflix -destination 'id=DD8FBFD3-E3DC-4F4F-BCF2-1667EF50A8C0'` (iPhone 17 Pro) | **BUILD SUCCEEDED**, 0 errors |
+| tvOS simulator | `-scheme weflix-tvOS -destination 'id=A533891E-0975-4902-9057-0F1E30BEDF90'` | **BUILD SUCCEEDED**, 0 errors |
+| macOS | `-scheme weflix-macOS -destination 'platform=macOS,arch=arm64'` + `CODE_SIGNING_ALLOWED=NO` | **BUILD SUCCEEDED**, 0 errors (no Mac development profile for `me.weflix` on this machine) |
+| Tests | `xcodebuild test -scheme weflix-macOS -destination 'platform=macOS,arch=arm64'` | **TEST SUCCEEDED, exit 0** — 415 tests. `WeFlixLiveAuthTests`' success-path test now compares `me.user` and checks the new `requests` block arrived |
+
+**Simulator, measured:** the app was built, installed and launched on the booted iPhone 17 Pro. The runtime UI
+snapshot (`snapshot_ui`) and a screenshot both show the first screen is **"Sign in"** / *"Use your WeFlix
+account."* with a *Username or email* field and a *Password* field — no "Choose a service", no Plex or Jellyfin
+button. `Shared/Features/Auth/WeFlixAccount/WeFlixSignedInView.swift` (the old "signed in as …" placeholder) is
+deleted: the requests root owns that screen now.
+
+### Not verified, and why
+
+**Everything in the simulator test that needs a signed-in account.** The brief says test credentials come only
+from the server repository's `.env.test.local` (`WEFLIX_TEST_USER`, `WEFLIX_TEST_PASSWORD`), and that file **does
+not exist** in `plex-custom-frontend` (checked: `.env.test.local`, `.env.local`, `.env.test` are all absent). It is
+gitignored (`.gitignore` line 34, `.env*`), and no credential was invented, guessed or asked for. So these are
+**not verified**, on the app side and the server side alike:
+
+- wrong password → the error sentence on the sign-in screen;
+- sign in → the requests screen (discover rails, search, a title's details);
+- requesting a title, and the request appearing **under the test user** in Overseerr;
+- deleting that test request through Overseerr's API;
+- relaunching and staying signed in;
+- Settings showing "connected via WeFlix" and Licences **on a signed-in device**;
+- Sign Out → back to Sign in.
+
+What *is* verified without a credential, on the live pre-production deployment: its `/api/health` serves the
+server commit, and the new proxy route exists and is bearer-only — no token `401`, a cookie instead of a bearer
+token `401`, a well-shaped but unknown bearer token `401`, `POST` `401` (commands and output in the report, which
+names the host because a curl transcript is not this repository).
+
+### Questions for Luther
+
+1. **The merge to `main` did not happen.** The brief authorises `Development → main` *"ONLY after every WEB gate
+   passes and the beta curl checks pass"*. The gates pass; the curl checks need the test account, which does not
+   exist here. **Nothing was merged, and `main` is untouched.** Say the word once `.env.test.local` exists (or if
+   you want the merge without the live proof) and it is a normal merge, no force-push.
+2. **`WEFLIX_BASE_URL` / `WEFLIX_TEST_BASE_URL` still exist** as an https-only environment override in
+   `WeFlixServer.baseURL` and in the live tests. The brief says the app uses `https://weflix.me` "only, from ONE
+   config constant"; the override *is* that one constant, it is unset in every shipped configuration, and removing
+   it would delete the only way the live tests can be pointed at the pre-production deployment. **Kept, and it now
+   names no host.** Tell me if you want it gone and I will remove it and the live tests' base-URL hook with it.
+3. **Editing a request is not allowed through the proxy.** The brief's allow-list names `POST /request`, own
+   requests and cancelling one's own pending request — not `PUT /request/<id>`, which is Strimr's "update a pending
+   request" and which the web app never had either. So `PUT` is a `404`, and the request sheet's "Update" path
+   would show *"That isn't available in the app."* If you want editing, it is one line in the server's allow-list
+   plus one in the app.
+4. **The requests badge on the discover screen is always 0.** `SeerrDiscoverViewModel.requestsBadgeCount` counts
+   *pending* requests and is gated on `MANAGE_REQUESTS`, which the server deliberately does not grant this app.
+   Left alone: changing what that number means is a decision, not a side effect.
+5. **Overseerr's relative avatars do not load** in the app (see above); absolute ones do. Making them work needs an
+   image path on the proxy that can be authorised without a header, which is a new decision rather than a fix.
+6. **The app's `requests` block is a superset of the brief's `{ enabled }`.** It also carries `overseerrUserId`
+   and `permissions`, because the client's request button, its "is this mine?" checks and its permission-driven
+   gates cannot work without them. Both are already visible to the app inside every `/request` row's
+   `requestedBy.id`, and neither is authority: the proxy ignores anything the client sends about who it is.
+7. **Six WEB test failures pre-date this work** and are untouched (see the server repository's checkpoint): they
+   are `isDirectRun`/Windows-path cases and date-dependent stats cases, and they fail identically at `7a01aec`
+   with this task's two edited files reverted — measured, not assumed. Out of scope, so not fixed.
 
 **Luther:** *"i check sample user on simulator. i notice theres no movie posters or images. then i logged in to my
 account. same. then i click one movie then it says server unavailable."* Three unrelated causes, all found by
@@ -133,8 +258,8 @@ is answered `401`, and `connectGateway` does when the account has no token to co
 
 If the home says something is wrong after this, the reason is now **Melvie's account**, not the wiring: a pending
 or disabled WeFlix account is refused by the gateway (`401`), so the app will now say the sign-in has ended and ask
-for it again rather than blaming the network. The discriminating check: sign in as Melvie on **beta.weflix.me in a
-browser** — if the web UI shows her no libraries either, the account itself needs approving, and the app is behaving
+for it again rather than blaming the network. The discriminating check: sign in as Melvie **in a browser on the
+pre-production WeFlix deployment** — if the web UI shows her no libraries either, the account itself needs approving, and the app is behaving
 correctly. What the app should do *instead* of asking for a sign-in (show the server's own sentence — "your account
 is waiting for approval") is worth doing with that evidence in hand.
 
@@ -176,7 +301,7 @@ server's S1–S5 are recorded in `plex-custom-frontend/checkpoints/CURRENT.md` (
 The point of the whole phase was *"when I sign in I can see movies and play it"*, so it was run, not argued:
 
 ```text
-launch app (SIMCTL_CHILD_WEFLIX_BASE_URL=https://beta.weflix.me)
+launch app (SIMCTL_CHILD_WEFLIX_BASE_URL=<the pre-production WeFlix deployment>)
   → signed in as the stored token's owner ("Lucifurr")
   → plist of the app's container, after the handover:
       weflix.accounts.v1  [{"plex":{"_0":{"displayName":"Lucifurr","id":"weflix:2"}}}]        ← the marker
@@ -325,7 +450,7 @@ forget it. `WeFlixAuthClientTests.theTwoMeaningsOf401AreNotTheSameThing()` pins 
 | tvOS simulator | `-scheme weflix-tvOS -destination 'id=A533891E-0975-4902-9057-0F1E30BEDF90'` | **BUILD SUCCEEDED**, 0 errors |
 | macOS | `-scheme weflix-macOS -destination 'platform=macOS,arch=arm64'` | **BUILD SUCCEEDED**, 0 errors — with `CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO`: this machine has no Mac development profile for `me.weflix` (*"No profiles for 'me.weflix' were found"*), so it compiles and links but is not signed here |
 | Tests | `xcodebuild test -scheme weflix-macOS -destination 'platform=macOS,arch=arm64' CODE_SIGNING_ALLOWED=NO` | **exit 0, 0 failures.** The tests live on the **macOS** scheme; the `weflix` (iOS) scheme has no testables in its `TestAction` |
-| Live tests | the same, with `WEFLIX_LIVE_TESTS=1`, `WEFLIX_TEST_BASE_URL=https://beta.weflix.me` and Luther's account in the scheme's test action | **exit 0 — all 15 passed**, including the whole cycle through the client: sign in → `me` → logout → `me` refused |
+| Live tests | the same, with `WEFLIX_LIVE_TESTS=1`, `WEFLIX_TEST_BASE_URL=<the pre-production WeFlix deployment>` and Luther's account in the scheme's test action | **exit 0 — all 15 passed**, including the whole cycle through the client: sign in → `me` → logout → `me` refused |
 
 `WeFlixAuthClientTests` **11/11 passed** (offline, stubbed transport: both meanings of `401`, a refusal's sentence,
 the rate-limit sentence, a 404 that must not blame the network, a broken body, no network, the four posted fields,

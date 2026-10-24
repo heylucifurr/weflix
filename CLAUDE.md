@@ -14,6 +14,17 @@ account, and every answer it draws comes from that server. It never contacts ple
 or Jellyfin server directly: the server holds the Plex token, does the transcoding decisions and owns the watch
 state.
 
+**And it holds no Overseerr credential either.** Requests go *app → WeFlix → Overseerr*:
+`https://weflix.me/api/app/seerr/...` with the device's bearer token, and the server adds the Overseerr address,
+its API key and the identity the call acts as. The app cannot name a user, has no Overseerr address to configure
+and has no Seerr sign-in of its own — `SeerrNetworkClient`, `SeerrStore` and `Shared/Repository/Seerr/**` are the
+whole of it.
+
+**One host, named once.** `https://weflix.me` lives in `Shared/Config/WeFlixServer.swift` and nowhere else. The
+pre-production deployment Luther rebuilds on every push to `Development`, and the Plex backend behind
+`weflix.me`, must **never** appear in this repository — not in code, config, a plist, the docs or the tests.
+Refer to them by name, never by address. (Measured: `grep -rn 'beta\.weflix' .` returns nothing.)
+
 ## How to work
 
 - **Read before changing.** Inspect the existing code, the platform differences and the current behaviour first.
@@ -23,8 +34,9 @@ state.
   rebuilt around a new server, and large parts of it are still the old client.
 - **Never fabricate.** No invented build results, no "it works" without a command or a screenshot behind it. If
   something was not measured, write **not verified**.
-- **Never print, log or commit a secret**: no token, no password, no `Authorization` header, no Plex token.
-  The WeFlix device token lives in the **Keychain** and nowhere else.
+- **Never print, log or commit a secret**: no token, no password, no `Authorization` header, no Plex token, no
+  Overseerr API key. The WeFlix device token lives in the **Keychain** and nowhere else; test credentials come
+  only from the server repository's `.env.test.local` and are never echoed.
 - **Keep the app runnable between commits.** Every commit must build for iOS, tvOS and macOS.
 - When a spec is unclear, take the literal reading, implement it, and log it under "Questions for Luther" in
   `checkpoints/CURRENT.md`.
@@ -40,8 +52,11 @@ state.
 | `weflix-macOS` | Mac. Separate scheme (`weflix-macOS`) with its own window and player window. |
 | `weflixTests` | Unit tests. |
 
-**Everything that can be shared lives in `Shared/`** and is compiled into all three apps: this project uses
-file-system-synchronized groups, so a new file under `Shared/` joins every target with no project edit.
+**Everything that can be shared lives in `Shared/`** and is compiled into all three apps. **A new file under
+`Shared/` needs one project edit**: the `weflix-tvOS` target's `Shared` group is an *allow-list*
+(`PBXFileSystemSynchronizedBuildFileExceptionSet`, `E9C449F82EF322DE00D2895B` in `weflix.xcodeproj/project.pbxproj`),
+so a file that is not named there compiles on iOS and macOS and is missing on tvOS. Add it in sorted order, and
+remove the entry when you delete the file. (iOS and macOS take all of `Shared/` by default.)
 
 ## Building
 
