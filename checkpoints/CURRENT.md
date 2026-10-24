@@ -152,10 +152,10 @@ applying the per-account library rule and the rate limit) and answer the `/ident
 sign-in answer instead of a PIN flow; **A4** swaps this placeholder for the real home; **A5** proves nothing on a
 live path still calls plex.tv.
 
-> **In-flight work that my commit `d4a6370` accidentally swept in — a real regression, please decide.** The client
-> repo's tree had Luther's **staged** app-icon work when I committed a checkpoint file with `git add <file> &&
-> git commit`: `git commit` commits the whole **index**, so his staged artwork went in too and was pushed. The
-> content is his and untouched; the attribution is not. A three-target build with it in place gives:
+> **The icon regression my commit `d4a6370` swept in — fixed in `5c1ba40`, as Luther chose.** The tree had his
+> **staged** app-icon work when I committed a checkpoint file: `git commit` commits the whole **index**, so it went
+> in and was pushed under my message. The content was his and intact; the attribution was not. Three-target build
+> then showed a real defect in it:
 >
 > ```text
 > weflix-tvOS/Assets.xcassets:./App Icon & Top Shelf Image.brandassets/App Icon.imagestack: error:
@@ -163,12 +163,19 @@ live path still calls plex.tv.
 >   Its current frame is {{-312, -392}, {1024, 1024}} while the image stack's size is {400, 240}.
 > ```
 >
-> The square `appicon.png` (1024×1024) replaced `logo_tvos_400@1x.jpg` / `logo_tvos_400@2x.jpg` /
-> `logo_tvos_1280.jpg`, which the layered tvOS brand assets require to be exactly 400×240 and 1280×768 — the very
-> artwork `main`'s `9a26fe6` ("restore layered app icon artwork") had just repaired. iOS and macOS build clean
-> (`actool` accepts the square icons there). **Left exactly as it is, pending Luther's call** — the fix is his to
-> choose: restore those ten tvOS layer files from `main`, or produce non-square layers for the new artwork. No
-> history was rewritten (no force-push, per both repos' rules).
+> The square `appicon.png` (1024×1024) had replaced the correctly-shaped layers `main`'s `9a26fe6` had just
+> repaired. **Luther's call was to keep the new artwork and fix the stacks**, so `5c1ba40` composes three
+> stack-sized images from it (scaled to the stack width, cropped to the middle band — seamless, since the artwork's
+> background is uniform and the wordmark is vertically centred) and restores main's imageset structure as PNGs:
+> `logo_tvos_1280.png` (1280×768), `logo_tvos_400@1x.png` (400×240), `logo_tvos_400@2x.png` (800×480). The stray
+> duplicate `appicon 1.png` files are gone. **Verified: tvOS `BUILD SUCCEEDED` with 0 actool errors (it reported
+> two before); iOS and macOS unaffected, still clean; his new icon artwork is kept everywhere.** No history was
+> rewritten (no force-push, per both repos' rules).
+>
+> **Process change from this, for every later session:** never `git add -A` / a bare `git commit` in this repo
+> while anybody might be working in it — stage explicit paths and check `git diff --cached --name-only` before
+> committing. My own `CLAUDE.md` says to preserve in-flight work; the index is part of that.
+
 
 
 
