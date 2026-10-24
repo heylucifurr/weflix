@@ -1,4 +1,31 @@
-## CORRECTION 2 — "your signin has ended" is the *deployment*, not the sign-in (2026-10-25, Cline)
+## MERGED — production now has the app's server half, so the app works again (2026-10-25, Cline)
+
+**Luther, after the measurement in the entry below:** *"Merge Development → main now and watch weflix.me until it
+serves the new commit — the app then works on production (also brings the requests feature)."*
+
+Done, on his explicit word, and verified: `https://weflix.me/api/health` now serves
+`f11a9e38731f906d3b6653c86adc40d9ecbd65a7` (the WEB merge of `Development` → `main`, recorded in the server
+repository's `checkpoints/CURRENT.md` under **MERGED**). Measured on production after the deploy: the app's
+routes, which were `404` before, are all present — `/api/app/stream-ticket` → **405** (it exists), and
+`/api/app/seerr/api/v1/search` → **401** (it exists); and the existing web UI is unharmed (`/login` → `200` with
+its title, `/signup` → `200`, `/requests` → `200`, no `5xx` on the player routes).
+
+**What that means for the app**, and it is the honest reading of the two symptoms Luther reported in sequence:
+
+- **Sign in → the library**, because the gateway is deployed. The dead end is gone for the real reason, not
+  because the app hides it.
+- **The requests tab appears only if his account has an Overseerr user linked** (`accounts.overseerr_user_id`,
+  set in the web UI's Admin → Users → *Overseerr id*). If it is not set, the tab stays hidden and Settings →
+  Integrations → Requests says *"Requests aren't set up for your account yet. Ask Luther."* — which, on a server
+  that now has the feature, is finally the **true** sentence and one click to fix.
+- The correction in `1095819` still matters and still applies: a WeFlix that *does* lack the app's library is now
+  reported as such (*"This WeFlix server doesn't have the app's library yet…"*) and does not log anybody out.
+
+**Not verified, and unchanged:** a signed-in run against production, because no test account exists here
+(`.env.test.local` absent in the server repository) and no typing tool was available to drive the simulator. So
+"sign in → the library" is verified at the level of *every route the app calls now exists on production and
+answers as designed*, not by a screenshot of the library.
+
 
 **Luther, after the previous correction:** *"it says your signin has ended. sign in again."*
 
