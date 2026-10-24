@@ -120,9 +120,10 @@ final class WeFlixGatewayURLTests: XCTestCase {
 
     // MARK: - A5: a WeFlix session cannot reach plex.tv
 
-    func testAGatewaySessionHasNoPlexTokenAndSoNoCloudRequest() async {
+    func testAGatewaySessionHasNoPlexTokenAndSoNoCloudRequest() {
+        // No bootstrap wait: this is about the two setters and what they leave behind, and bootstrapping reaches
+        // for the network — a unit test must not (it took two minutes when it did).
         let context = PlexAPIContext()
-        await context.waitForBootstrap()
         // What the sign-in does first, then what the gateway connection does: the cloud (plex.tv) token must end
         // up empty, because that token is what a cloud request would send to plex.tv.
         context.setAuthToken("a-weflix-device-token")
@@ -165,6 +166,99 @@ final class WeFlixGatewayURLTests: XCTestCase {
         XCTAssertEqual(server.clientIdentifier, WeFlixServer.gatewayMachineIdentifier)
         XCTAssertNil(server.accessToken, "the credential is in the account store, not in a resource")
         XCTAssertNil(server.connections, "there is nothing to discover through plex.tv")
+    }
+
+    // MARK: - The reported bug: a second WeFlix user landed on the first user's profile (2026-10-24)
+
+    /// Two people's profiles, as the app stores them: one local profile per person, linked to their own account.
+    private func profile(name: String, id: String) -> WeFlixProfile {
+        .local(LocalProfile(id: id, name: name))
+    }
+
+    private func link(profileID: String, accountID: String) -> ProfileLink {
+        ProfileLink(profileID: profileID, accountID: accountID, user: .plexHome(uuid: accountID.replacingOccurrences(of: "plex:", with: "")))
+    }
+
+    func testANewAccountGetsItsOwnProfileAndNotWhoeverWasSignedIn() {
+        // Luther was signed in (the owner, "Lucifurr", account `plex:weflix:2`) and then signed in as Melvie. The
+        // app reused the active profile, so the icon, the Profiles list and the name all said Lucifurr.
+        let luther = profile(name: "Lucifurr", id: "local.luther")
+        let melvieAccountID = "plex:weflix:8"
+        let choice = WeFlixGatewayAccount.profileChoice(
+            accountID: melvieAccountID,
+            displayName: "Melvie Ramos",
+            profiles: [luther],
+            links: { profile in profile.id == "local.luther" ? [self.link(profileID: profile.id, accountID: "plex:weflix:2")] : [] },
+        )
+
+        XCTAssertEqual(
+            choice,
+            .create(name: "Melvie Ramos"),
+            "a WeFlix account with no profile of its own gets one, named after the person signing in",
+        )
+    }
+
+    func testSigningInAgainLandsOnThatAccountSProfile() {
+        let melvie = profile(name: "Melvie Ramos", id: "local.melvie")
+        let accountID = "plex:weflix:8"
+        let choice = WeFlixGatewayAccount.profileChoice(
+            accountID: accountID,
+            displayName: "Melvie Ramos",
+            profiles: [melvie],
+            links: { _ in [self.link(profileID: "local.melvie", accountID: accountID)] },
+        )
+
+        XCTAssertEqual(choice, .reuse(profileID: "local.melvie", renameTo: nil), "a second sign-in is a no-op")
+    }
+
+    func testTheNameTheBugLeftBehindIsRepaired() {
+        // The exact state Luther is in: one profile, one link, and the *previous* person's name on it.
+        let stale = profile(name: "Lucifurr", id: "local.0197d07c")
+        let accountID = "plex:weflix:8"
+        let choice = WeFlixGatewayAccount.profileChoice(
+            accountID: accountID,
+            displayName: "Melvie Ramos",
+            profiles: [stale],
+            links: { _ in [self.link(profileID: "local.0197d07c", accountID: accountID)] },
+        )
+
+        XCTAssertEqual(
+            choice,
+            .reuse(profileID: "local.0197d07c", renameTo: "Melvie Ramos"),
+            "the profile this account is the only link of is renamed to the person who is signed in",
+        )
+    }
+
+    func testAProfileWithSeveralLinksAndAPlexHomeProfileAreNeverRenamed() {
+        let shared = profile(name: "Living room", id: "local.shared")
+        let accountID = "plex:weflix:8"
+        let sharedChoice = WeFlixGatewayAccount.profileChoice(
+            accountID: accountID,
+            displayName: "Melvie Ramos",
+            profiles: [shared],
+            links: { _ in
+                [self.link(profileID: "local.shared", accountID: accountID), self.link(profileID: "local.shared", accountID: "jellyfin:home.melvie")]
+            },
+        )
+
+        XCTAssertEqual(
+            sharedChoice,
+            .reuse(profileID: "local.shared", renameTo: nil),
+            "a profile a human built for two accounts keeps its name",
+        )
+    }
+
+    func testEachWeFlixAccountHasItsOwnServerIdentity() {
+        let melvie = WeFlixGatewayAccount.serverIdentity(for: "weflix:8")
+        let luther = WeFlixGatewayAccount.serverIdentity(for: "weflix:2")
+
+        XCTAssertNotEqual(
+            melvie,
+            luther,
+            "two accounts sharing one identity is how the second sign-in connected with the first account's token",
+        )
+        XCTAssertTrue(melvie.id.hasPrefix(WeFlixServer.gatewayMachineIdentifier))
+        XCTAssertTrue(melvie.id.contains("weflix:8"))
     }
 
     // MARK: - The host (this build's own rule)

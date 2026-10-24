@@ -77,7 +77,12 @@ struct WeFlixAppGate<Ready: View>: View {
                     .transition(.profileActivation)
             } else {
                 WeFlixSignedInView(user: user, isWorking: session.isWorking) {
-                    Task { await session.signOut() }
+                    Task {
+                        await session.signOut()
+                        // The account, its link and its token go with the sign-out: leaving them behind is how a
+                        // second person's sign-in ended up on the first person's profile (2026-10-24).
+                        sessionManager.forgetWeFlixAccount()
+                    }
                 }
                 .transition(.opacity)
             }

@@ -583,7 +583,9 @@ final class ServerRegistry {
     /// to name — so `connectPlex()` recognises it by the same `weflix:` marker and connects it through
     /// `selectGateway()` instead of `/switch` + `selectServer()`.
     private func resolveGateway(link: ProfileLink, account: PlexAccount, userUUID: String) {
-        let server = ServerIdentity(provider: .plex, id: WeFlixServer.gatewayMachineIdentifier)
+        // **One identity per WeFlix account** (`WeFlixGatewayAccount.serverIdentity(for:)`), because two accounts
+        // sharing one identity meant the second one found the first one's entry and connected with its token.
+        let server = WeFlixGatewayAccount.serverIdentity(for: userUUID)
         guard entries[server] == nil, !Task.isCancelled else { return }
         add(Entry(
             session: ServerSession(
@@ -638,7 +640,9 @@ final class ServerRegistry {
         }
         context.selectGateway(
             token: token,
-            accountID: server.id,
+            // The **machine identifier**, not `server.id`: the identity is the app's own key for this account's
+            // server (one per account), while this is the identifier the gateway answers in `/identity`.
+            accountID: WeFlixServer.gatewayMachineIdentifier,
             displayName: entry.session.name,
         )
         guard !Task.isCancelled, entries[server]?.session.isEnabled == true else { return }

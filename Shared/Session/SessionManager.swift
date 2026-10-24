@@ -421,12 +421,30 @@ final class SessionManager {
         // Home token below is the device token itself: one credential, stored in the one place tokens live.
         let userUUID = WeFlixGatewayAccount.plexAccountID(for: user.id)
         accountStore.setHomeToken(token, accountID: account.id, userUUID: userUUID)
-        let targetProfileID: String = if let activeProfile {
-            activeProfile.id
-        } else if let existing = profiles.first {
-            existing.id
-        } else {
-            profileStore.createLocalProfile(name: account.displayName).id
+        // **One WeFlix account at a time.** The device token store keeps one token (`weflix.app.deviceToken`), so any
+        // other WeFlix account on this device is dead weight at best: at worst it is the previous person's account,
+        // still linked to a profile, connecting with a token the sign-out revoked. Dropping it here is what makes a
+        // second person's sign-in clean — and what repairs the state the 2026-10-24 bug left behind.
+        discardOtherWeFlixAccounts(keeping: account.id)
+
+        let choice = WeFlixGatewayAccount.profileChoice(
+            accountID: account.id,
+            displayName: account.displayName,
+            profiles: profiles,
+            links: { [profileStore] profile in profileStore.links(for: profile) },
+        )
+        let targetProfileID: String
+        switch choice {
+        case let .reuse(profileID, renameTo):
+            targetProfileID = profileID
+            // The repair: a profile this account is the only link of, still named after the person who was signed in
+            // when it was created. Nobody loses a name they chose — a profile with two links, or a Plex Home one, is
+            // never touched (`WeFlixGatewayAccount.profileChoice`).
+            if let renameTo, let local = profiles.first(where: { $0.id == profileID })?.localProfile {
+                profileStore.updateLocalProfile(LocalProfile(id: local.id, name: renameTo, pin: local.pin))
+            }
+        case let .create(name):
+            targetProfileID = profileStore.createLocalProfile(name: name).id
         }
         profileStore.addLink(ProfileLink(
             profileID: targetProfileID,
@@ -445,17 +463,46 @@ final class SessionManager {
         return profile
     }
 
+    /// Removes every WeFlix account except `keeping`: the account, its stored token, its links and any local profile
+    /// it leaves empty. (PHASE APP-GATEWAY, 2026-10-24.)
+    ///
+    /// Called at adoption, because there is one device token in the Keychain and therefore one live WeFlix sign-in.
+    /// A second WeFlix account cannot be connected to anything — its token is gone the moment the next person signs
+    /// in — so keeping it would only offer a server that can never answer.
+    private func discardOtherWeFlixAccounts(keeping accountID: String) {
+        for account in accountStore.accounts
+            where account.plexAccount.map(WeFlixGatewayAccount.isGateway) == true && account.id != accountID
+        {
+            discard(accountID: account.id)
+        }
+    }
+
+    /// The account, its token, its links, and the local profile it existed for.
+    private func discard(accountID: String) {
+        let linkedProfiles = profiles.filter { profile in
+            profileStore.links(for: profile).contains { $0.accountID == accountID }
+        }
+        for profile in linkedProfiles {
+            profileStore.removeLink(profileID: profile.id, accountID: accountID)
+            guard profileStore.links(for: profile).isEmpty, let local = profile.localProfile else { continue }
+            // The profile existed only for this account, so it goes with it — an empty profile in the picker is a
+            // person who is not there.
+            removeSettings(ofProfiles: [profile.id])
+            profileStore.deleteLocalProfile(id: local.id)
+        }
+        try? accountStore.remove(accountID: accountID)
+        if activeProfile.map({ !profiles.contains($0) }) == true {
+            activeProfile = nil
+            registry.deactivate()
+        }
+    }
+
     /// Signing out of WeFlix forgets the account, its link and its token, so a later sign-in starts clean.
     func forgetWeFlixAccount() {
         for account in accountStore.accounts where account.plexAccount.map(WeFlixGatewayAccount.isGateway) == true {
-            if let profile = activeProfile {
-                profileStore.removeLink(profileID: profile.id, accountID: account.id)
-            }
-            try? accountStore.remove(accountID: account.id)
+            discard(accountID: account.id)
         }
         WeFlixStreamTicketCache.shared.clear()
-        registry.deactivate()
-        activeProfile = nil
         status = accountStore.accounts.isEmpty ? .needsAccount : .needsProfileSelection
     }
 

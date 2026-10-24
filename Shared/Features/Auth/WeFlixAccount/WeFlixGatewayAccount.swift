@@ -50,4 +50,55 @@ enum WeFlixGatewayAccount {
             connections: nil,
         )
     }
+
+    /// The app's **identity for one WeFlix account's server**.
+    ///
+    /// One per account, and that is the point: `ServerIdentity` is the key the registry stores a connected server
+    /// under, so two WeFlix accounts sharing one key meant the second one found the first one's entry already there
+    /// and connected with **the first account's token** — which is how a sign-in as one person produced another
+    /// person's (dead) server (Luther, 2026-10-24). The machine identifier the client *reports* stays
+    /// `WeFlixServer.gatewayMachineIdentifier`, because that is what the gateway answers in `/identity`.
+    static func serverIdentity(for userID: String) -> ServerIdentity {
+        ServerIdentity(provider: .plex, id: "\(WeFlixServer.gatewayMachineIdentifier).\(userID)")
+    }
+}
+
+/// Which profile a WeFlix sign-in lands on — and the reason it is a separate, pure decision.
+///
+/// A profile in this app **is a person**, and a WeFlix account is one person. So the profile is the one already
+/// linked to *that account*, never "whichever profile was active": on 2026-10-24 Luther signed in as a second
+/// WeFlix user and the app put him on the first user's profile — the icon, the Profiles list and the name at the
+/// top all said the other person, because adoption reused `activeProfile`.
+///
+/// Kept as a function over plain values so the rule can be tested without a store, a registry or a network.
+enum WeFlixProfileChoice: Equatable {
+    /// The profile this account is already linked to. `renameTo` is set when that profile is still carrying
+    /// somebody else's name — the repair for the state the bug left behind.
+    case reuse(profileID: String, renameTo: String?)
+    /// The first time this account signs in on this device: a profile of its own, named after the person.
+    case create(name: String)
+}
+
+extension WeFlixGatewayAccount {
+    /// The choice, given the profiles the app knows and the links each one has.
+    static func profileChoice(
+        accountID: String,
+        displayName: String,
+        profiles: [WeFlixProfile],
+        links: (WeFlixProfile) -> [ProfileLink],
+    ) -> WeFlixProfileChoice {
+        let name = displayName.isEmpty ? "WeFlix" : displayName
+
+        for profile in profiles where links(profile).contains(where: { $0.accountID == accountID }) {
+            let ownLinks = links(profile)
+            // Only a **local** profile that this account is the *only* thing linked to is renamed, because that is
+            // one an earlier adoption created for this account and left the previous person's name on. A local
+            // profile several accounts share (the Jellyfin pattern) and a Plex Home profile are never renamed.
+            let renameable = profile.isLocal && profile.name != name && ownLinks.count == 1
+
+            return .reuse(profileID: profile.id, renameTo: renameable ? name : nil)
+        }
+
+        return .create(name: name)
+    }
 }
