@@ -37,4 +37,17 @@ enum WeFlixGatewayAccount {
             displayName: user.displayName.isEmpty ? "WeFlix" : user.displayName,
         ))
     }
+
+    /// The app's picture of the one WeFlix server — `weflix.me`, as `ServerRegistry` builds it.
+    ///
+    /// It carries **no connections and no access token**: there is nothing to discover and the credential lives in
+    /// the account store, so this is a name and an identifier and nothing else.
+    static var server: PlexCloudResource {
+        PlexCloudResource(
+            name: "WeFlix",
+            clientIdentifier: WeFlixServer.gatewayMachineIdentifier,
+            accessToken: nil,
+            connections: nil,
+        )
+    }
 }

@@ -149,6 +149,11 @@ final class PlexAPIContext {
         baseURLServer = WeFlixServer.gatewayBaseURL
         speaksToGateway = true
         connectionKind = .custom
+        // PHASE APP-GATEWAY A5 — the **plex.tv** token is cleared, and it must stay cleared: a WeFlix device token
+        // in `authTokenCloud` is what the cloud repositories would put in a request to plex.tv. With it empty, a
+        // cloud call throws locally (`PlexCloudNetworkClient`) instead of sending anything, so a WeFlix path cannot
+        // reach plex.tv — and cannot hand it the app's device token, which would be a credential leak.
+        authTokenCloud = nil
         serverAccessGeneration &+= 1
     }
 

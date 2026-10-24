@@ -118,6 +118,55 @@ final class WeFlixGatewayURLTests: XCTestCase {
         XCTAssertNil(cache.current())
     }
 
+    // MARK: - A5: a WeFlix session cannot reach plex.tv
+
+    func testAGatewaySessionHasNoPlexTokenAndSoNoCloudRequest() async {
+        let context = PlexAPIContext()
+        await context.waitForBootstrap()
+        // What the sign-in does first, then what the gateway connection does: the cloud (plex.tv) token must end
+        // up empty, because that token is what a cloud request would send to plex.tv.
+        context.setAuthToken("a-weflix-device-token")
+        context.selectGateway(token: "a-weflix-device-token", accountID: "weflix-gateway", displayName: "Lucifurr")
+
+        XCTAssertNil(context.authTokenCloud, "a WeFlix session must hold no plex.tv token")
+
+        let snapshot = try? context.serverAccessSnapshot()
+        XCTAssertEqual(snapshot?.speaksToGateway, true)
+        XCTAssertEqual(snapshot?.baseURL, WeFlixServer.gatewayBaseURL)
+        XCTAssertEqual(snapshot?.authToken, "a-weflix-device-token", "the gateway's own credential is the device token")
+    }
+
+    func testACloudClientWithoutAPlexTokenRefusesBeforeItSendsAnything() async {
+        // No token, so no request — a WeFlix session can reach no plex.tv path, and nothing is sent to try.
+        let client = PlexCloudNetworkClient(authToken: nil, clientIdentifier: "weflix-gateway")
+        do {
+            let _: PlexCloudUser = try await client.request(path: "/user")
+            XCTFail("a cloud request without a Plex token must not be made")
+        } catch PlexAPIError.missingAuthToken {
+            // Exactly the refusal, and it happened before any URL was built.
+        } catch {
+            XCTFail("expected the missing-token refusal, got \(error)")
+        }
+
+        let empty = PlexCloudNetworkClient(authToken: "", clientIdentifier: "weflix-gateway")
+        do {
+            try await empty.send(path: "/home/users")
+            XCTFail("nor may a write")
+        } catch PlexAPIError.missingAuthToken {
+            // The same rule for the writes.
+        } catch {
+            XCTFail("expected the missing-token refusal, got \(error)")
+        }
+    }
+
+    func testTheWeFlixServerIsOneServerWithNoConnectionsAndNoToken() {
+        let server = WeFlixGatewayAccount.server
+
+        XCTAssertEqual(server.clientIdentifier, WeFlixServer.gatewayMachineIdentifier)
+        XCTAssertNil(server.accessToken, "the credential is in the account store, not in a resource")
+        XCTAssertNil(server.connections, "there is nothing to discover through plex.tv")
+    }
+
     // MARK: - The host (this build's own rule)
 
     func testTheAppTalksToWeFlixAndOnlyWeFlix() {

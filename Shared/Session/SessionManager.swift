@@ -289,6 +289,8 @@ final class SessionManager {
 
     /// Gets the token of a Home user, asking Plex with the account token. Protected users need their PIN.
     func switchPlexHomeUser(accountID: String, userUUID: String, pin: String?) async throws -> String {
+        // A5 — a WeFlix account has no Home users to switch to, and plex.tv is not asked about it.
+        guard !isWeFlixAccount(accountID) else { throw PlexServerAccessRecoveryError.accountUnauthorized }
         guard let accountToken = try accountStore.token(forAccountID: accountID) else {
             throw PlexServerAccessRecoveryError.accountUnauthorized
         }
@@ -302,6 +304,9 @@ final class SessionManager {
 
     /// Servers a Plex user can reach, for the server choice of the first launch.
     func plexServers(accountID: String, userUUID: String) async throws -> [PlexCloudResource] {
+        // A5 — the server list of a WeFlix account is one server in one file (`WeFlixServer`), and it is not asked
+        // of plex.tv: there is nothing there to ask about, since a gateway account exists only on WeFlix.
+        guard !isWeFlixAccount(accountID) else { return [WeFlixGatewayAccount.server] }
         guard let token = try accountStore.homeToken(accountID: accountID, userUUID: userUUID)
             ?? accountStore.token(forAccountID: accountID)
         else { throw PlexServerAccessRecoveryError.accountUnauthorized }
@@ -311,6 +316,8 @@ final class SessionManager {
     }
 
     func refreshPlexHomeUsers(accountID: String) async {
+        // A5 — the second door to the same plex.tv call, closed for a WeFlix account.
+        guard !isWeFlixAccount(accountID) else { return }
         guard let token = try? accountStore.token(forAccountID: accountID) else { return }
         let context = PlexAPIContext()
         await context.waitForBootstrap()
@@ -339,6 +346,11 @@ final class SessionManager {
 
     private func refreshAllPlexHomeUsers() {
         for account in accountStore.plexAccounts {
+            // PHASE APP-GATEWAY A5 — a WeFlix account has no plex.tv Home users: the list lives on plex.tv, and this
+            // is the launch path that would ask for it. Skipping here (and again in `refreshPlexHomeUsers`) is what
+            // keeps the app from making that call at all.
+            guard !WeFlixGatewayAccount.isGateway(account) else { continue }
+
             Task { await refreshPlexHomeUsers(accountID: MediaAccount.plexID(account.id)) }
         }
     }
@@ -445,6 +457,17 @@ final class SessionManager {
         registry.deactivate()
         activeProfile = nil
         status = accountStore.accounts.isEmpty ? .needsAccount : .needsProfileSelection
+    }
+
+    /// Is this the WeFlix account rather than one from plex.tv? (PHASE APP-GATEWAY A5.)
+    ///
+    /// One question, asked in one place, by every flow that would otherwise call plex.tv: the Home-user list, the
+    /// switch, the server list. A WeFlix account has none of those, and asking plex.tv about it would send nothing
+    /// useful and (before `selectGateway` cleared the cloud token) could have sent the wrong credential entirely.
+    private func isWeFlixAccount(_ accountID: String) -> Bool {
+        guard case let .plex(account)? = accountStore.account(id: accountID) else { return false }
+
+        return WeFlixGatewayAccount.isGateway(account)
     }
 
     // MARK: - Links

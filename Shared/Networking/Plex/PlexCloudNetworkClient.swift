@@ -31,6 +31,11 @@ final class PlexCloudNetworkClient {
         headers: [String: String] = [:],
         body: Data? = nil,
     ) async throws -> Response {
+        // PHASE APP-GATEWAY A5 — nothing here without a **plex.tv** token. A WeFlix session has none
+        // (`selectGateway` clears it), and this is what keeps a WeFlix path from reaching plex.tv at all: the
+        // refusal happens before any URL is built, so there is no request to answer and no device token to send.
+        guard authToken?.isEmpty == false else { throw PlexAPIError.missingAuthToken }
+
         let request = try buildRequest(path: path, method: method, queryItems: queryItems, headers: headers, body: body)
 
         let (data, response) = try await session.data(for: request)
@@ -57,6 +62,9 @@ final class PlexCloudNetworkClient {
         headers: [String: String] = [:],
         body: Data? = nil,
     ) async throws {
+        // A5 — the same rule for the writes: no plex.tv token, no plex.tv request.
+        guard authToken?.isEmpty == false else { throw PlexAPIError.missingAuthToken }
+
         let request = try buildRequest(path: path, method: method, queryItems: queryItems, headers: headers, body: body)
 
         let (_, response) = try await session.data(for: request)
