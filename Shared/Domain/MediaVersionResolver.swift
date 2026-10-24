@@ -144,7 +144,7 @@ extension MediaFileVersion {
 }
 
 enum MediaVersionResolver {
-    private static let logger = Logger(subsystem: "Strimr", category: "MediaVersion")
+    private static let logger = Logger(subsystem: "WeFlix", category: "MediaVersion")
 
     /// Picks the version to play: explicit choice, then preference (id, then signature), then the provider default.
     /// Falls back to the first available version when the pick is unavailable; returns nil when none is.

@@ -4,8 +4,8 @@ import Foundation
 /// Plex account is without contacting plex.tv, and the resource lets the server start offline right after the update.
 struct OfflineSessionStore {
     private let keychain = Keychain(service: Bundle.main.bundleIdentifier!)
-    private let userDefaultsKey = "strimr.offline.session.plex.user.v1"
-    private let resourceKeychainKey = "strimr.offline.session.plex.resource.v1"
+    private let userDefaultsKey = "weflix.offline.session.plex.user.v1"
+    private let resourceKeychainKey = "weflix.offline.session.plex.resource.v1"
 
     /// The user was stored without its token.
     func loadPlexUser(token: String) -> PlexCloudUser? {

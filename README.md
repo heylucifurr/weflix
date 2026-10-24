@@ -1,14 +1,14 @@
 <p align="center">
-  <img src=".github/assets/strimr-wordmark.jpg" alt="Strimr" width="100%" />
+  <img src=".github/assets/weflix-wordmark.jpg" alt="WeFlix" width="100%" />
 </p>
 
 <hr />
 
 <p align="center">
-  <img src=".github/assets/strimr-platform-showcase.jpg" alt="Strimr on macOS, iOS, and tvOS" width="100%" />
+  <img src=".github/assets/weflix-platform-showcase.jpg" alt="WeFlix on macOS, iOS, and tvOS" width="100%" />
 </p>
 
-Strimr is a third-party client for Plex and Jellyfin, built in Swift with native interfaces for iPhone, iPad, Mac, and Apple TV.
+WeFlix is a third-party client for Plex and Jellyfin, built in Swift with native interfaces for iPhone, iPad, Mac, and Apple TV.
 
 ## Key Features
 
@@ -25,7 +25,7 @@ Strimr is a third-party client for Plex and Jellyfin, built in Swift with native
 
 ### Servers & Profiles
 - **Plex and Jellyfin**, with several servers at once in a unified home, libraries, and search
-- Strimr profiles with optional PIN, alongside Plex Home users, each with their own connections and settings
+- WeFlix profiles with optional PIN, alongside Plex Home users, each with their own connections and settings
 - Seerr integration
 
 ### Browsing

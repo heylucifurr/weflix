@@ -12,13 +12,13 @@ struct MultiServerMigration {
     }
 
     enum LegacyKeys {
-        static let provider = "strimr.activeProvider"
-        static let plexServerIdentifier = "strimr.plex.serverIdentifier"
-        static let plexToken = "strimr.plex.authToken"
-        static let jellyfinConnection = "strimr.jellyfin.connection.v1"
+        static let provider = "weflix.activeProvider"
+        static let plexServerIdentifier = "weflix.plex.serverIdentifier"
+        static let plexToken = "weflix.plex.authToken"
+        static let jellyfinConnection = "weflix.jellyfin.connection.v1"
     }
 
-    static let versionKey = "strimr.multiServer.migrationVersion"
+    static let versionKey = "weflix.multiServer.migrationVersion"
     static let currentVersion = 1
 
     let defaults: UserDefaults

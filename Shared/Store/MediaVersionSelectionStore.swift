@@ -19,7 +19,7 @@ final class MediaVersionSelectionStore {
     static let maximumRecordCount = 500
 
     @ObservationIgnored private let defaults: UserDefaults
-    @ObservationIgnored private let storageKey = "strimr.versionSelections"
+    @ObservationIgnored private let storageKey = "weflix.versionSelections"
     @ObservationIgnored private let schemaVersion = 1
 
     private(set) var records: [MediaVersionSelectionRecord]

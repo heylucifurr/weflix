@@ -196,7 +196,7 @@ struct PlaybackSettings: Codable, Equatable {
     var subtitleBackgroundStrength = SubtitleBackgroundStrength.standard
     var subtitleEdgeStyle = SubtitleEdgeStyle.shadow
     var subtitleVerticalPosition = SubtitleVerticalPosition.bottom
-    /// Nil plays in Strimr's built-in player.
+    /// Nil plays in WeFlix's built-in player.
     var externalPlayer: ExternalPlayerSelection?
     /// Kept apart from the selection so switching to another player does not lose the template.
     var customExternalPlayer: CustomExternalPlayer?

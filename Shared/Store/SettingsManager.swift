@@ -6,7 +6,7 @@ import Observation
 @Observable
 final class SettingsManager {
     @ObservationIgnored private let defaults: UserDefaults
-    @ObservationIgnored private let storageKey = "strimr.settings"
+    @ObservationIgnored private let storageKey = "weflix.settings"
 
     private(set) var settings: AppSettings
 

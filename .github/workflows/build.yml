@@ -15,8 +15,8 @@ jobs:
       - name: iOS build
         run: |
           xcodebuild \
-            -project Strimr.xcodeproj \
-            -scheme Strimr \
+            -project weflix.xcodeproj \
+            -scheme weflix \
             -destination 'platform=iOS Simulator,name=iPhone 17' \
             -configuration Debug \
             -derivedDataPath build/DerivedData \
@@ -31,8 +31,8 @@ jobs:
       - name: tvOS build
         run: |
           xcodebuild \
-            -project Strimr.xcodeproj \
-            -scheme Strimr-tvOS \
+            -project weflix.xcodeproj \
+            -scheme weflix-tvOS \
             -destination 'platform=tvOS Simulator,name=Apple TV 4K (3rd generation)' \
             -configuration Debug \
             -derivedDataPath build/DerivedData \
@@ -47,14 +47,14 @@ jobs:
       - name: Configure macOS tests
         run: |
           cp Config/Config-example.xcconfig Config/Config.xcconfig
-          printf '\nPRODUCT_BUNDLE_IDENTIFIER = app.strimr.ci\n' >> Config/Config.xcconfig
+          printf '\nPRODUCT_BUNDLE_IDENTIFIER = me.weflix.ci\n' >> Config/Config.xcconfig
           touch Config/Config-TopShelf.xcconfig
 
       - name: macOS build and tests
         run: |
           xcodebuild \
-            -project Strimr.xcodeproj \
-            -scheme Strimr-macOS \
+            -project weflix.xcodeproj \
+            -scheme weflix-macOS \
             -destination 'platform=macOS' \
             -configuration Debug \
             -derivedDataPath build/DerivedData \

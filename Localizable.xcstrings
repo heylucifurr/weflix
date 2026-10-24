@@ -2225,19 +2225,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Uses your connected Strimr Plex account."
+            "value" : "Uses your connected WeFlix Plex account."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Utilise votre compte Plex connecté à Strimr."
+            "value" : "Utilise votre compte Plex connecté à WeFlix."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "使用您连接到 Strimr 的 Plex 账户。"
+            "value" : "使用您连接到 WeFlix 的 Plex 账户。"
           }
         }
       }
@@ -8965,19 +8965,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Strimr could not finish updating your session. Your account is kept; try again once your connection is back."
+            "value" : "WeFlix could not finish updating your session. Your account is kept; try again once your connection is back."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Strimr n’a pas pu terminer la mise à jour de votre session. Votre compte est conservé ; réessayez quand la connexion sera rétablie."
+            "value" : "WeFlix n’a pas pu terminer la mise à jour de votre session. Votre compte est conservé ; réessayez quand la connexion sera rétablie."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Strimr 无法完成会话更新。您的账户已保留；请在网络恢复后重试。"
+            "value" : "WeFlix 无法完成会话更新。您的账户已保留；请在网络恢复后重试。"
           }
         }
       }
@@ -9515,19 +9515,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Strimr can show several Plex accounts and Jellyfin servers together. You can also do this later in the settings."
+            "value" : "WeFlix can show several Plex accounts and Jellyfin servers together. You can also do this later in the settings."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Strimr peut réunir plusieurs comptes Plex et serveurs Jellyfin. Vous pourrez aussi le faire plus tard dans les Réglages."
+            "value" : "WeFlix peut réunir plusieurs comptes Plex et serveurs Jellyfin. Vous pourrez aussi le faire plus tard dans les Réglages."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Strimr 可以同时显示多个 Plex 账户和 Jellyfin 服务器。您也可以稍后在设置中添加。"
+            "value" : "WeFlix 可以同时显示多个 Plex 账户和 Jellyfin 服务器。您也可以稍后在设置中添加。"
           }
         }
       }
@@ -10021,19 +10021,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Couldn't open %@, playing in Strimr"
+            "value" : "Couldn't open %@, playing in WeFlix"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Impossible d'ouvrir %@, lecture dans Strimr"
+            "value" : "Impossible d'ouvrir %@, lecture dans WeFlix"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "无法打开 %@，将在 Strimr 中播放"
+            "value" : "无法打开 %@，将在 WeFlix 中播放"
           }
         }
       }
@@ -10417,19 +10417,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Strimr could not reconnect to your Plex server. Check your connection and try again."
+            "value" : "WeFlix could not reconnect to your Plex server. Check your connection and try again."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Strimr n’a pas pu se reconnecter à votre serveur Plex. Vérifiez votre connexion et réessayez."
+            "value" : "WeFlix n’a pas pu se reconnecter à votre serveur Plex. Vérifiez votre connexion et réessayez."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Strimr 无法重新连接到您的 Plex 服务器。请检查网络连接后重试。"
+            "value" : "WeFlix 无法重新连接到您的 Plex 服务器。请检查网络连接后重试。"
           }
         }
       }
@@ -11803,19 +11803,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Otherwise Strimr opens the last profile used."
+            "value" : "Otherwise WeFlix opens the last profile used."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sinon, Strimr reprend le dernier profil utilisé."
+            "value" : "Sinon, WeFlix reprend le dernier profil utilisé."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "否则 Strimr 将打开上次使用的个人资料。"
+            "value" : "否则 WeFlix 将打开上次使用的个人资料。"
           }
         }
       }
@@ -12111,19 +12111,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Strimr profile"
+            "value" : "WeFlix profile"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Profil Strimr"
+            "value" : "Profil WeFlix"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Strimr 个人资料"
+            "value" : "WeFlix 个人资料"
           }
         }
       }
@@ -12551,19 +12551,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Choose the media service you want to use with Strimr."
+            "value" : "Choose the media service you want to use with WeFlix."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Choisissez le service multimédia à utiliser avec Strimr."
+            "value" : "Choisissez le service multimédia à utiliser avec WeFlix."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "选择您想要与 Strimr 配合使用的媒体服务。"
+            "value" : "选择您想要与 WeFlix 配合使用的媒体服务。"
           }
         }
       }
@@ -15092,19 +15092,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Strimr couldn’t connect using this address. Check it and try again."
+            "value" : "WeFlix couldn’t connect using this address. Check it and try again."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Strimr n’a pas pu se connecter avec cette adresse. Vérifiez-la et réessayez."
+            "value" : "WeFlix n’a pas pu se connecter avec cette adresse. Vérifiez-la et réessayez."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Strimr 无法使用此地址连接。请检查后重试。"
+            "value" : "WeFlix 无法使用此地址连接。请检查后重试。"
           }
         }
       }
@@ -15322,19 +15322,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "If this device is on the same network as the server, make sure Local Network access is allowed for Strimr. Otherwise, enable Remote Access in Plex."
+            "value" : "If this device is on the same network as the server, make sure Local Network access is allowed for WeFlix. Otherwise, enable Remote Access in Plex."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Si cet appareil est sur le même réseau que le serveur, vérifiez que l’accès au réseau local est autorisé pour Strimr. Sinon, activez l’accès à distance dans Plex."
+            "value" : "Si cet appareil est sur le même réseau que le serveur, vérifiez que l’accès au réseau local est autorisé pour WeFlix. Sinon, activez l’accès à distance dans Plex."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "如果此设备与服务器位于同一网络，请确保已允许 Strimr 访问本地网络。否则，请在 Plex 中启用远程访问。"
+            "value" : "如果此设备与服务器位于同一网络，请确保已允许 WeFlix 访问本地网络。否则，请在 Plex 中启用远程访问。"
           }
         }
       }
@@ -17452,19 +17452,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Strimr (Built-in)"
+            "value" : "WeFlix (Built-in)"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Strimr (intégré)"
+            "value" : "WeFlix (intégré)"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Strimr（内置）"
+            "value" : "WeFlix（内置）"
           }
         }
       }
@@ -17606,19 +17606,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Use {url} for the video link (required), {title} for its title, {position} for the start position in seconds and {callback} to come back to Strimr. sub={subtitles} repeats the parameter for each subtitle file. Example: myplayer://play?url={url}"
+            "value" : "Use {url} for the video link (required), {title} for its title, {position} for the start position in seconds and {callback} to come back to WeFlix. sub={subtitles} repeats the parameter for each subtitle file. Example: myplayer://play?url={url}"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Utilisez {url} pour le lien de la vidéo (obligatoire), {title} pour son titre, {position} pour la position de départ en secondes et {callback} pour revenir dans Strimr. sub={subtitles} répète le paramètre pour chaque fichier de sous-titres. Exemple : myplayer://play?url={url}"
+            "value" : "Utilisez {url} pour le lien de la vidéo (obligatoire), {title} pour son titre, {position} pour la position de départ en secondes et {callback} pour revenir dans WeFlix. sub={subtitles} répète le paramètre pour chaque fichier de sous-titres. Exemple : myplayer://play?url={url}"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "使用 {url} 表示视频链接（必填），{title} 表示标题，{position} 表示起始位置（秒），{callback} 用于返回 Strimr。sub={subtitles} 会为每个字幕文件重复该参数。示例：myplayer://play?url={url}"
+            "value" : "使用 {url} 表示视频链接（必填），{title} 表示标题，{position} 表示起始位置（秒），{callback} 用于返回 WeFlix。sub={subtitles} 会为每个字幕文件重复该参数。示例：myplayer://play?url={url}"
           }
         }
       }
@@ -17804,19 +17804,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "When server-provided thumbnails aren’t available, Strimr can load previews from the video. This may use additional network data and device resources."
+            "value" : "When server-provided thumbnails aren’t available, WeFlix can load previews from the video. This may use additional network data and device resources."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lorsque les miniatures fournies par le serveur ne sont pas disponibles, Strimr peut charger des aperçus depuis la vidéo. Cela peut utiliser davantage de données réseau et de ressources de l’appareil."
+            "value" : "Lorsque les miniatures fournies par le serveur ne sont pas disponibles, WeFlix peut charger des aperçus depuis la vidéo. Cela peut utiliser davantage de données réseau et de ressources de l’appareil."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "服务器提供的缩略图不可用时，Strimr 可以从视频中加载预览。这可能会使用额外的网络流量和设备资源。"
+            "value" : "服务器提供的缩略图不可用时，WeFlix 可以从视频中加载预览。这可能会使用额外的网络流量和设备资源。"
           }
         }
       }
@@ -18178,19 +18178,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Show image previews while moving through the playback timeline. Strimr uses thumbnails provided by your media server when available."
+            "value" : "Show image previews while moving through the playback timeline. WeFlix uses thumbnails provided by your media server when available."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Affiche des aperçus d’image lorsque vous parcourez la timeline de lecture. Strimr utilise les miniatures fournies par votre serveur multimédia lorsqu’elles sont disponibles."
+            "value" : "Affiche des aperçus d’image lorsque vous parcourez la timeline de lecture. WeFlix utilise les miniatures fournies par votre serveur multimédia lorsqu’elles sont disponibles."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在播放时间线上移动时显示图像预览。Strimr 会优先使用您的媒体服务器提供的缩略图。"
+            "value" : "在播放时间线上移动时显示图像预览。WeFlix 会优先使用您的媒体服务器提供的缩略图。"
           }
         }
       }
@@ -18904,19 +18904,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Preserves authored fonts, colors, animation, and positioning. Strimr's appearance settings are used when this is off."
+            "value" : "Preserves authored fonts, colors, animation, and positioning. WeFlix's appearance settings are used when this is off."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Conserve les polices, couleurs, animations et positions d’origine. Les réglages d’apparence de Strimr sont utilisés lorsque cette option est désactivée."
+            "value" : "Conserve les polices, couleurs, animations et positions d’origine. Les réglages d’apparence de WeFlix sont utilisés lorsque cette option est désactivée."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "保留原始字体、颜色、动画和位置。关闭后将使用 Strimr 的字幕外观设置。"
+            "value" : "保留原始字体、颜色、动画和位置。关闭后将使用 WeFlix 的字幕外观设置。"
           }
         }
       }
@@ -19241,19 +19241,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Use it when the server is behind a reverse proxy or reached through a VPN such as Tailscale. Strimr tries this address first, even on your local network."
+            "value" : "Use it when the server is behind a reverse proxy or reached through a VPN such as Tailscale. WeFlix tries this address first, even on your local network."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "À utiliser si le serveur est derrière un reverse proxy ou accessible via un VPN comme Tailscale. Strimr essaie cette adresse en premier, même sur votre réseau local."
+            "value" : "À utiliser si le serveur est derrière un reverse proxy ou accessible via un VPN comme Tailscale. WeFlix essaie cette adresse en premier, même sur votre réseau local."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "当服务器位于反向代理之后或通过 Tailscale 等 VPN 访问时使用。Strimr 会优先尝试此地址，即使在本地网络中也是如此。"
+            "value" : "当服务器位于反向代理之后或通过 Tailscale 等 VPN 访问时使用。WeFlix 会优先尝试此地址，即使在本地网络中也是如此。"
           }
         }
       }
@@ -19642,19 +19642,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Watch together in Strimr"
+            "value" : "Watch together in WeFlix"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Regarder ensemble dans Strimr"
+            "value" : "Regarder ensemble dans WeFlix"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在 Strimr 中一起观看"
+            "value" : "在 WeFlix 中一起观看"
           }
         }
       }
@@ -20178,24 +20178,24 @@
         }
       }
     },
-    "Strimr" : {
+    "WeFlix" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Strimr"
+            "value" : "WeFlix"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Strimr"
+            "value" : "WeFlix"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Strimr"
+            "value" : "WeFlix"
           }
         }
       }

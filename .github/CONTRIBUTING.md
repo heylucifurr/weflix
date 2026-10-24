@@ -1,6 +1,6 @@
-# Contributing to Strimr
+# Contributing to WeFlix
 
-Thanks for helping improve Strimr. New features, bug fixes, behavior improvements, and UX/UI polish are welcome.
+Thanks for helping improve WeFlix. New features, bug fixes, behavior improvements, and UX/UI polish are welcome.
 
 Before starting work on a feature, open an issue so the implementation and any potential obstacles can be discussed. Before reporting a bug, check that an existing issue does not already cover it.
 
@@ -27,11 +27,11 @@ brew install swiftformat
 
 2. When building the tvOS Top Shelf extension, also create `Config/Config-TopShelf.xcconfig` with `DEVELOPMENT_TEAM` and a distinct `PRODUCT_BUNDLE_IDENTIFIER` for the extension. This file is local and must not be committed.
 
-3. Open `Strimr.xcodeproj` in Xcode. Swift package dependencies are resolved by Xcode.
+3. Open `weflix.xcodeproj` in Xcode. Swift package dependencies are resolved by Xcode.
 
 ## Architecture
 
-Strimr is a native SwiftUI app for iOS, macOS, and tvOS. Platform-specific code and assets live in `Strimr-iOS/`, `Strimr-macOS/`, and `Strimr-tvOS/`; reusable models, networking, storage, features, and views live in `Shared/`. The tvOS Top Shelf extension lives in `StrimrTopShelf/`.
+WeFlix is a native SwiftUI app for iOS, macOS, and tvOS. Platform-specific code and assets live in `weflix-iOS/`, `weflix-macOS/`, and `weflix-tvOS/`; reusable models, networking, storage, features, and views live in `Shared/`. The tvOS Top Shelf extension lives in `weflixTopShelf/`.
 
 The UI follows an MVVM-style approach with SwiftUI views and Observation-based `@Observable` view models. Prefer shared implementations when behavior is the same across platforms, while keeping platform-specific interaction and presentation in the appropriate target.
 
@@ -41,8 +41,8 @@ The UI follows an MVVM-style approach with SwiftUI views and Observation-based `
 - Keep screens focused, with one primary action per view when possible.
 - Use shared components instead of duplicating UI.
 - Localize every user-facing string. Use keys such as `Text("home.title")` and `String(localized: "errors.selectServer")` instead of string literals.
-- Put shared app strings in `Localizable.xcstrings`, platform Info.plist strings in the relevant `InfoPlist.xcstrings`, and Top Shelf extension strings in `StrimrTopShelf/Localizable.xcstrings`.
-- Put platform-specific assets in the appropriate `Strimr-iOS/Assets.xcassets`, `Strimr-macOS/Assets.xcassets`, or `Strimr-tvOS/Assets.xcassets` catalog.
+- Put shared app strings in `Localizable.xcstrings`, platform Info.plist strings in the relevant `InfoPlist.xcstrings`, and Top Shelf extension strings in `weflixTopShelf/Localizable.xcstrings`.
+- Put platform-specific assets in the appropriate `weflix-iOS/Assets.xcassets`, `weflix-macOS/Assets.xcassets`, or `weflix-tvOS/Assets.xcassets` catalog.
 
 ## Formatting and validation
 
@@ -58,11 +58,11 @@ Verify formatting with the same check used in CI:
 swiftformat --lint . --reporter github-actions-log
 ```
 
-Build each affected app scheme in Xcode before opening a pull request. The shared schemes are `Strimr` for iOS, `Strimr-macOS`, and `Strimr-tvOS`. For tvOS command-line validation, use an arm64 simulator destination because LibDovi does not provide an x86_64 simulator slice:
+Build each affected app scheme in Xcode before opening a pull request. The shared schemes are `weflix` for iOS, `weflix-macOS`, and `weflix-tvOS`. For tvOS command-line validation, use an arm64 simulator destination because LibDovi does not provide an x86_64 simulator slice:
 
 ```sh
-xcodebuild -project Strimr.xcodeproj \
-  -scheme Strimr-tvOS \
+xcodebuild -project weflix.xcodeproj \
+  -scheme weflix-tvOS \
   -destination 'generic/platform=tvOS Simulator' \
   CODE_SIGNING_ALLOWED=NO \
   ARCHS=arm64 \

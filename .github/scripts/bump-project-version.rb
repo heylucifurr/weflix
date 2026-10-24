@@ -2,7 +2,7 @@
 # frozen_string_literal: true
 
 EXPECTED_CONFIGURATION_COUNT = 8
-PROJECT_PATH = ARGV.fetch(1, "Strimr.xcodeproj/project.pbxproj")
+PROJECT_PATH = ARGV.fetch(1, "weflix.xcodeproj/project.pbxproj")
 VERSION_PATTERN = /(?<=MARKETING_VERSION = )[^;\s]+/
 BUILD_PATTERN = /(?<=CURRENT_PROJECT_VERSION = )[^;\s]+/
 

@@ -37,5 +37,5 @@ jobs:
             Bumps the shared iOS, tvOS, macOS, and Top Shelf marketing version to `${{ steps.bump.outputs.version }}`.
 
             Keeps the shared build number at `${{ steps.bump.outputs.build }}`.
-          add-paths: Strimr.xcodeproj/project.pbxproj
+          add-paths: weflix.xcodeproj/project.pbxproj
           delete-branch: true

@@ -130,7 +130,7 @@ extension Error {
 }
 
 enum OfflineArtworkPath {
-    private static let downloadPosterPrefix = "strimr-download://"
+    private static let downloadPosterPrefix = "weflix-download://"
 
     static func downloadPoster(_ downloadID: String) -> String {
         downloadPosterPrefix + downloadID

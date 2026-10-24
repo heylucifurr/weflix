@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Report a problem with Strimr
+about: Report a problem with WeFlix
 labels: bug
 ---
 

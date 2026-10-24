@@ -6,7 +6,7 @@ import Observation
 @MainActor
 @Observable
 final class DownloadManager: NSObject, URLSessionDownloadDelegate {
-    static let backgroundSessionIdentifier = "strimr.downloads.background"
+    static let backgroundSessionIdentifier = "weflix.downloads.background"
     weak static var shared: DownloadManager?
 
     private(set) var items: [DownloadItem] = []
@@ -17,7 +17,7 @@ final class DownloadManager: NSObject, URLSessionDownloadDelegate {
 
     @ObservationIgnored private let settingsManager: SettingsManager
     @ObservationIgnored private let monitor = NWPathMonitor()
-    @ObservationIgnored private let monitorQueue = DispatchQueue(label: "strimr.downloads.network-monitor")
+    @ObservationIgnored private let monitorQueue = DispatchQueue(label: "weflix.downloads.network-monitor")
     @ObservationIgnored private var backgroundEventsCompletionHandler: (() -> Void)?
     @ObservationIgnored private var progressByTaskIdentifier: [Int: Double] = [:]
     @ObservationIgnored private var isLoadingPersistedState = false
@@ -146,7 +146,7 @@ final class DownloadManager: NSObject, URLSessionDownloadDelegate {
               items[index].taskIdentifier == currentTaskIdentifier
         else {
             let error = NSError(
-                domain: "Strimr.DownloadManager",
+                domain: "WeFlix.DownloadManager",
                 code: 1,
                 userInfo: [NSLocalizedDescriptionKey: "Unable to allow cellular access for this download."],
             )
@@ -1004,7 +1004,7 @@ final class DownloadManager: NSObject, URLSessionDownloadDelegate {
 
     private nonisolated static func stageDownloadFile(at location: URL) throws -> URL {
         let stagingDirectory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("strimr-download-staging", isDirectory: true)
+            .appendingPathComponent("weflix-download-staging", isDirectory: true)
         try FileManager.default.createDirectory(
             at: stagingDirectory,
             withIntermediateDirectories: true,

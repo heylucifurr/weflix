@@ -24,7 +24,7 @@ final class ServerRegistry {
         var connectionFailures = 0
     }
 
-    private(set) var profile: StrimrProfile?
+    private(set) var profile: WeFlixProfile?
     private(set) var linkStatuses: [String: LinkStatus] = [:]
     /// Changes on every profile activation, so views drop the state of the previous profile.
     private(set) var generation = 0
@@ -146,7 +146,7 @@ final class ServerRegistry {
     // MARK: - Activation
 
     /// Resolves the links of `profile` and starts connecting its enabled servers in parallel.
-    func activate(profile: StrimrProfile, links: [ProfileLink]) {
+    func activate(profile: WeFlixProfile, links: [ProfileLink]) {
         deactivate()
         self.profile = profile
         generation += 1

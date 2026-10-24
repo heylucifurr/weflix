@@ -52,13 +52,13 @@ enum MediaAccount: Codable, Hashable, Sendable, Identifiable {
 }
 
 struct PlexAccount: Codable, Hashable, Sendable {
-    /// uuid of the plex.tv account. Its token lives in the Keychain under `strimr.plex.account.<id>`.
+    /// uuid of the plex.tv account. Its token lives in the Keychain under `weflix.plex.account.<id>`.
     let id: String
     let displayName: String
 }
 
 struct JellyfinAccount: Codable, Hashable, Sendable {
-    /// The token keeps the pre-multi-server Keychain key, `strimr.jellyfin.token.<serverID>.<userID>`.
+    /// The token keeps the pre-multi-server Keychain key, `weflix.jellyfin.token.<serverID>.<userID>`.
     let connection: JellyfinConnection
 
     var server: ServerIdentity {

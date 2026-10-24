@@ -610,7 +610,7 @@ private final class PlexLiveTVPlaybackSession: LiveTVPlaybackSession {
             .init(name: "session", value: transcodeIdentifier),
             .init(name: "X-Plex-Session-Identifier", value: sessionIdentifier),
             .init(name: "X-Plex-Client-Identifier", value: snapshot.clientIdentifier),
-            .init(name: "X-Plex-Product", value: "Strimr"),
+            .init(name: "X-Plex-Product", value: "WeFlix"),
             .init(name: "X-Plex-Version", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String),
             .init(name: "X-Plex-Platform", value: "Generic"),
             .init(name: "X-Plex-Client-Profile-Name", value: "Generic"),

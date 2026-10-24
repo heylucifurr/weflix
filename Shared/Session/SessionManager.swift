@@ -60,7 +60,7 @@ final class SessionManager {
 
     private(set) var status: Status = .hydrating
     private(set) var loadingPhase: LoadingPhase = .preparing
-    private(set) var activeProfile: StrimrProfile?
+    private(set) var activeProfile: WeFlixProfile?
 
     @ObservationIgnored private let keychain = Keychain(service: Bundle.main.bundleIdentifier!)
     #if os(tvOS)
@@ -108,7 +108,7 @@ final class SessionManager {
         accountStore.accounts
     }
 
-    var profiles: [StrimrProfile] {
+    var profiles: [WeFlixProfile] {
         profileStore.profiles(accounts: accountStore.accounts)
     }
 
@@ -139,7 +139,7 @@ final class SessionManager {
         }
     }
 
-    func links(for profile: StrimrProfile) -> [ProfileLink] {
+    func links(for profile: WeFlixProfile) -> [ProfileLink] {
         profileStore.links(for: profile)
     }
 
@@ -210,7 +210,7 @@ final class SessionManager {
 
     /// Activates a profile and shows the app as soon as one server is ready, after three seconds at most; the other
     /// servers join when they connect. A Plex Home token, when given, comes from a fresh `/switch`.
-    func activate(_ profile: StrimrProfile, plexHomeToken: String? = nil) async {
+    func activate(_ profile: WeFlixProfile, plexHomeToken: String? = nil) async {
         let links = profileStore.links(for: profile)
         guard !links.isEmpty else {
             status = .needsProfileSelection
@@ -404,7 +404,7 @@ final class SessionManager {
     }
 
     /// The last profile stays while accounts exist: removing everything goes through removing the accounts.
-    func canDeleteProfile(_ profile: StrimrProfile) -> Bool {
+    func canDeleteProfile(_ profile: WeFlixProfile) -> Bool {
         profile.isLocal && profiles.count > 1
     }
 

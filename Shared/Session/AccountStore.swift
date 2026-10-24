@@ -11,7 +11,7 @@ final class AccountStore {
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let secureStore: any SecureStore
 
-    static let storageKey = "strimr.accounts.v1"
+    static let storageKey = "weflix.accounts.v1"
 
     init(
         userDefaults: UserDefaults = .standard,
@@ -117,22 +117,22 @@ final class AccountStore {
     static func tokenKey(for account: MediaAccount) -> String {
         switch account {
         case let .plex(account):
-            "strimr.plex.account.\(account.id)"
+            "weflix.plex.account.\(account.id)"
         case let .jellyfin(account):
             jellyfinTokenKey(serverID: account.connection.serverID, userID: account.connection.userID)
         }
     }
 
     static func jellyfinTokenKey(serverID: String, userID: String) -> String {
-        "strimr.jellyfin.token.\(serverID).\(userID)"
+        "weflix.jellyfin.token.\(serverID).\(userID)"
     }
 
     static func homeTokenKey(accountID: String, userUUID: String) -> String {
-        "strimr.plex.home.\(accountID).\(userUUID)"
+        "weflix.plex.home.\(accountID).\(userUUID)"
     }
 
     static func resourcesKey(userUUID: String) -> String {
-        "strimr.plex.resources.\(userUUID)"
+        "weflix.plex.resources.\(userUUID)"
     }
 
     private func persist() throws {

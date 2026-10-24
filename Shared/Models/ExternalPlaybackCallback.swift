@@ -1,6 +1,6 @@
 import Foundation
 
-/// The x-callback-url opened by an external player when it closes. Strimr adds the item to the callback URL,
+/// The x-callback-url opened by an external player when it closes. WeFlix adds the item to the callback URL,
 /// which players keep, then reads the standard parameters they append.
 nonisolated struct ExternalPlaybackCallback: Equatable, Sendable {
     enum Outcome: Equatable, Sendable {
@@ -13,7 +13,7 @@ nonisolated struct ExternalPlaybackCallback: Equatable, Sendable {
     let duration: TimeInterval?
     let outcome: Outcome
 
-    private static let scheme = "strimr"
+    private static let scheme = "weflix"
     private static let host = "x-callback-url"
     private static let path = "/playbackDidFinish"
 

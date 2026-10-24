@@ -20,7 +20,7 @@ actor JellyfinTrickplayThumbnailProvider: ScrubThumbnailProviding {
             .joined()
         cacheDirectory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)
             .first?
-            .appendingPathComponent("StrimrTrickplay", isDirectory: true)
+            .appendingPathComponent("WeFlixTrickplay", isDirectory: true)
             .appendingPathComponent(digest, isDirectory: true)
             ?? FileManager.default.temporaryDirectory.appendingPathComponent(digest, isDirectory: true)
     }

@@ -7,7 +7,7 @@ import Observation
 @MainActor
 @Observable
 final class SharePlayCoordinator {
-    private(set) var activity: StrimrWatchActivity?
+    private(set) var activity: WeFlixWatchActivity?
     private(set) var isInSession = false
     private(set) var activityChangeID = UUID()
     private(set) var participantCount = 0
@@ -20,7 +20,7 @@ final class SharePlayCoordinator {
 
     @ObservationIgnored private let sessionManager: SessionManager
     @ObservationIgnored private let groupStateObserver = GroupStateObserver()
-    @ObservationIgnored private var session: GroupSession<StrimrWatchActivity>?
+    @ObservationIgnored private var session: GroupSession<WeFlixWatchActivity>?
     @ObservationIgnored private weak var playbackPresenter: (any PlaybackPresenting)?
     @ObservationIgnored private weak var playerController: PlayerController?
     @ObservationIgnored private var sessionSubscriptions: Set<AnyCancellable> = []
@@ -37,7 +37,7 @@ final class SharePlayCoordinator {
     init(sessionManager: SessionManager) {
         self.sessionManager = sessionManager
         sessionListener = Task { [weak self] in
-            for await session in StrimrWatchActivity.sessions() {
+            for await session in WeFlixWatchActivity.sessions() {
                 guard !Task.isCancelled else { return }
                 await self?.accept(session)
             }
@@ -54,12 +54,12 @@ final class SharePlayCoordinator {
         title: String,
         initialPosition: Double,
         server: ServerIdentity,
-    ) -> StrimrWatchActivity? {
+    ) -> WeFlixWatchActivity? {
         guard sessionManager.registry.services(for: server) != nil else {
             errorMessage = String(localized: "sharePlay.error.serverUnavailable")
             return nil
         }
-        return StrimrWatchActivity(
+        return WeFlixWatchActivity(
             activityID: UUID(),
             provider: server.provider,
             serverIdentifier: server.id,
@@ -95,7 +95,7 @@ final class SharePlayCoordinator {
         await activate(activity)
     }
 
-    func activate(_ activity: StrimrWatchActivity) async {
+    func activate(_ activity: WeFlixWatchActivity) async {
         guard !isActivating else { return }
 
         isActivating = true
@@ -137,12 +137,12 @@ final class SharePlayCoordinator {
         }
     }
 
-    func sharingDidStart(_ activity: StrimrWatchActivity) {
+    func sharingDidStart(_ activity: WeFlixWatchActivity) {
         locallyPreparedActivityIDs.insert(activity.activityID)
         sharingPresentationActivityID = activity.activityID
     }
 
-    func sharingDidCancel(_ activity: StrimrWatchActivity) {
+    func sharingDidCancel(_ activity: WeFlixWatchActivity) {
         locallyPreparedActivityIDs.remove(activity.activityID)
     }
 
@@ -200,7 +200,7 @@ final class SharePlayCoordinator {
 
     private func publishPendingNextItemIfLeader() {
         guard let session, isLocalLeader, let item = pendingNextItem else { return }
-        let next = StrimrWatchActivity(
+        let next = WeFlixWatchActivity(
             activityID: UUID(),
             provider: item.provider,
             serverIdentifier: session.activity.serverIdentifier,
@@ -227,7 +227,7 @@ final class SharePlayCoordinator {
         return leader?.id == session.localParticipant.id
     }
 
-    private func accept(_ newSession: GroupSession<StrimrWatchActivity>) async {
+    private func accept(_ newSession: GroupSession<WeFlixWatchActivity>) async {
         let acceptanceActivityID = newSession.activity.activityID
         pendingSessionAcceptanceActivityID = acceptanceActivityID
         do {
@@ -319,7 +319,7 @@ final class SharePlayCoordinator {
         }
     }
 
-    private func launchPlaybackIfNeeded(for activity: StrimrWatchActivity) async {
+    private func launchPlaybackIfNeeded(for activity: WeFlixWatchActivity) async {
         guard lastLaunchedActivityID != activity.activityID,
               let playbackPresenter
         else { return }
@@ -339,12 +339,12 @@ final class SharePlayCoordinator {
         }
     }
 
-    private func ensureAccess(to activity: StrimrWatchActivity) async throws {
+    private func ensureAccess(to activity: WeFlixWatchActivity) async throws {
         let services = try await resolvedServices(for: activity)
         _ = try await services.detail.mediaItem(id: activity.ratingKey)
     }
 
-    func playerViewModel(for activity: StrimrWatchActivity) async throws -> PlayerViewModel {
+    func playerViewModel(for activity: WeFlixWatchActivity) async throws -> PlayerViewModel {
         let services = try await resolvedServices(for: activity)
         let queue = try await services.playback.queue(
             startingWith: activity.ratingKey,
@@ -360,7 +360,7 @@ final class SharePlayCoordinator {
     }
 
     /// Any server of the active profile can host the activity, Plex or Jellyfin.
-    private func resolvedServices(for activity: StrimrWatchActivity) async throws -> MediaServices {
+    private func resolvedServices(for activity: WeFlixWatchActivity) async throws -> MediaServices {
         let server = ServerIdentity(provider: activity.provider, id: activity.serverIdentifier)
         guard let services = sessionManager.registry.services(for: server) else {
             throw SharePlayError.serverUnavailable
@@ -368,7 +368,7 @@ final class SharePlayCoordinator {
         return services
     }
 
-    private func handleActivityChange(_ newActivity: StrimrWatchActivity) {
+    private func handleActivityChange(_ newActivity: WeFlixWatchActivity) {
         guard activity != newActivity else { return }
         let isReplacingActivity = activity != nil
         activity = newActivity
@@ -392,7 +392,7 @@ final class SharePlayCoordinator {
         }
     }
 
-    private func playbackIdentifier(for activity: StrimrWatchActivity) -> String {
+    private func playbackIdentifier(for activity: WeFlixWatchActivity) -> String {
         activity.activityID.uuidString
     }
 

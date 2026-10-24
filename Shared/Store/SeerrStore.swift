@@ -5,7 +5,7 @@ import Observation
 @Observable
 final class SeerrStore {
     @ObservationIgnored private let defaults: UserDefaults
-    @ObservationIgnored private let baseURLKey = "strimr.seerr.baseURL"
+    @ObservationIgnored private let baseURLKey = "weflix.seerr.baseURL"
     @ObservationIgnored private let sessionService: SeerrSessionService
 
     private(set) var baseURLString: String?

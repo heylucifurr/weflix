@@ -44,7 +44,7 @@ final class ProfileStore {
 
     struct BorrowableConnection: Hashable, Identifiable {
         /// nil for a Jellyfin account no profile uses anymore.
-        let sourceProfile: StrimrProfile?
+        let sourceProfile: WeFlixProfile?
         let accountID: String
         let user: LinkedUser
 
@@ -53,7 +53,7 @@ final class ProfileStore {
         }
     }
 
-    static let storageKey = "strimr.profiles.v1"
+    static let storageKey = "weflix.profiles.v1"
 
     private(set) var state: State
 
@@ -82,8 +82,8 @@ final class ProfileStore {
 
     /// Local profiles first, then the Plex Home users of each account in account order. A Home user reachable through
     /// two accounts is listed once.
-    func profiles(accounts: [MediaAccount]) -> [StrimrProfile] {
-        var result = state.localProfiles.map(StrimrProfile.local)
+    func profiles(accounts: [MediaAccount]) -> [WeFlixProfile] {
+        var result = state.localProfiles.map(WeFlixProfile.local)
         var seenUsers = Set<String>()
         for account in accounts {
             guard case let .plex(plexAccount) = account else { continue }
@@ -94,7 +94,7 @@ final class ProfileStore {
         return result
     }
 
-    func profile(id: String, accounts: [MediaAccount]) -> StrimrProfile? {
+    func profile(id: String, accounts: [MediaAccount]) -> WeFlixProfile? {
         profiles(accounts: accounts).first { $0.id == id }
     }
 
@@ -154,13 +154,13 @@ final class ProfileStore {
 
     // MARK: - Links
 
-    func links(for profile: StrimrProfile) -> [ProfileLink] {
+    func links(for profile: WeFlixProfile) -> [ProfileLink] {
         let explicit = state.links.filter { $0.profileID == profile.id }
         guard case let .plexHome(homeProfile) = profile else { return explicit }
         return [homeProfile.implicitLink] + explicit.filter { $0.accountID != homeProfile.accountID }
     }
 
-    func hasLinks(_ profile: StrimrProfile) -> Bool {
+    func hasLinks(_ profile: WeFlixProfile) -> Bool {
         !links(for: profile).isEmpty
     }
 
@@ -192,7 +192,7 @@ final class ProfileStore {
     /// Connections another profile could lend to `profile`, then the Jellyfin accounts no profile uses: one entry per
     /// (account, user), without the servers the profile already reaches. A Plex account already linked to the profile
     /// brings the same servers, so it is excluded as a whole.
-    func borrowableConnections(for profile: StrimrProfile, accounts: [MediaAccount]) -> [BorrowableConnection] {
+    func borrowableConnections(for profile: WeFlixProfile, accounts: [MediaAccount]) -> [BorrowableConnection] {
         let ownLinks = links(for: profile)
         let ownAccountIDs = Set(ownLinks.map(\.accountID))
         let ownJellyfinServers = Set(ownLinks.compactMap { link in
@@ -279,7 +279,7 @@ final class ProfileStore {
 
     /// The account whose Plex watchlist the profile shows: the parent account of a Plex Home profile, otherwise the
     /// chosen account or the first linked Plex account.
-    func watchlistAccountID(for profile: StrimrProfile, accounts: [MediaAccount]) -> String? {
+    func watchlistAccountID(for profile: WeFlixProfile, accounts: [MediaAccount]) -> String? {
         let plexAccountIDs = links(for: profile).map(\.accountID).filter { id in
             accounts.first { $0.id == id }?.provider == .plex
         }

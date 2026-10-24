@@ -17,7 +17,7 @@ struct ProfileDetailView: View {
     @State private var hasPresentedInitialConnection = false
     @State private var linkPendingRemoval: ProfileLink?
 
-    private var profile: StrimrProfile? {
+    private var profile: WeFlixProfile? {
         sessionManager.profileStore.profile(id: profileID, accounts: sessionManager.accounts)
     }
 
@@ -81,7 +81,7 @@ struct ProfileDetailView: View {
     }
 
     @ViewBuilder
-    private func form(for profile: StrimrProfile) -> some View {
+    private func form(for profile: WeFlixProfile) -> some View {
         #if os(tvOS)
             VStack(alignment: .leading, spacing: 32) {
                 if let local = profile.localProfile {
@@ -96,7 +96,7 @@ struct ProfileDetailView: View {
         #endif
     }
 
-    private func rows(for profile: StrimrProfile) -> some View {
+    private func rows(for profile: WeFlixProfile) -> some View {
         Form {
             if let local = profile.localProfile {
                 #if !os(tvOS)
@@ -170,7 +170,7 @@ struct ProfileDetailView: View {
     }
 
     @ViewBuilder
-    private func connectionRow(_ link: ProfileLink, profile: StrimrProfile) -> some View {
+    private func connectionRow(_ link: ProfileLink, profile: WeFlixProfile) -> some View {
         let isImplicit = profile.plexHomeProfile?.implicitLink == link
         #if os(tvOS)
             // A trailing button cannot take focus inside a tvOS row: the row itself offers the removal.
@@ -222,7 +222,7 @@ struct ProfileDetailView: View {
         }
     }
 
-    private func plexAccountIDs(of profile: StrimrProfile) -> [String] {
+    private func plexAccountIDs(of profile: WeFlixProfile) -> [String] {
         sessionManager.links(for: profile).map(\.accountID).filter {
             sessionManager.accountStore.account(id: $0)?.provider == .plex
         }

@@ -5,7 +5,7 @@ import Observation
 @Observable
 final class FavoritesStore {
     @ObservationIgnored private let defaults: UserDefaults
-    @ObservationIgnored private let storageKey = "strimr.favorites.v1"
+    @ObservationIgnored private let storageKey = "weflix.favorites.v1"
 
     private var recordsByScope: [String: [PlexFavoriteSnapshot]]
 

@@ -49,9 +49,9 @@ final class PlexAPIContext {
     @ObservationIgnored private var recoveryHandler: ((Bool) async throws -> Void)?
 
     @ObservationIgnored private let keychain = Keychain(service: Bundle.main.bundleIdentifier!)
-    @ObservationIgnored private let clientIdKey = "strimr.plex.clientId"
-    @ObservationIgnored private let connectionKeyPrefix = "strimr.plex.connection"
-    @ObservationIgnored private let customConnectionKeyPrefix = "strimr.plex.customConnection"
+    @ObservationIgnored private let clientIdKey = "weflix.plex.clientId"
+    @ObservationIgnored private let connectionKeyPrefix = "weflix.plex.connection"
+    @ObservationIgnored private let customConnectionKeyPrefix = "weflix.plex.customConnection"
 
     init() {
         bootstrapTask = Task { [weak self] in

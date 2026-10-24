@@ -168,7 +168,7 @@ struct CreateLocalProfileView: View {
 #endif
 
 struct ProfileRow: View {
-    let profile: StrimrProfile
+    let profile: WeFlixProfile
     let isActive: Bool
 
     var body: some View {

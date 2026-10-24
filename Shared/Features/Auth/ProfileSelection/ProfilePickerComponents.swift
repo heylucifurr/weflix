@@ -274,7 +274,7 @@ struct ProfileEntranceView: View {
 
 /// Shown while a chosen profile connects, in continuity with the picker's entrance.
 struct ProfileActivationView: View {
-    let profile: StrimrProfile
+    let profile: WeFlixProfile
 
     var body: some View {
         let choice = ProfileChoice(profile: profile, isActive: false)

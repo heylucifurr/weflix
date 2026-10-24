@@ -15,7 +15,7 @@ struct BorrowConnectionView: View {
     @State private var isBorrowing = false
     @State private var errorMessage: String?
 
-    private var profile: StrimrProfile? {
+    private var profile: WeFlixProfile? {
         sessionManager.profileStore.profile(id: profileID, accounts: sessionManager.accounts)
     }
 
@@ -24,7 +24,7 @@ struct BorrowConnectionView: View {
         return sessionManager.profileStore.borrowableConnections(for: profile, accounts: sessionManager.accounts)
     }
 
-    private var sourceProfiles: [StrimrProfile] {
+    private var sourceProfiles: [WeFlixProfile] {
         var seen = Set<String>()
         return candidates.compactMap(\.sourceProfile).filter { seen.insert($0.id).inserted }
     }

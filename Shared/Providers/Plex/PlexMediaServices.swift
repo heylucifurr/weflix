@@ -1399,7 +1399,7 @@ private extension PlexMedia {
 enum PlexMediaServicesFactory {
     /// - Parameters:
     ///   - userID: Plex user of the token, which owns the offline data and track preferences of this server.
-    ///   - favoritesProfileID: Strimr profile the local favorites belong to.
+    ///   - favoritesProfileID: WeFlix profile the local favorites belong to.
     static func make(
         context: PlexAPIContext,
         serverName: String,

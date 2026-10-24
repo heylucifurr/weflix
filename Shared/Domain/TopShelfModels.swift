@@ -20,8 +20,8 @@ nonisolated struct TopShelfStoredSession: Codable, Hashable, Sendable {
 }
 
 nonisolated enum TopShelfSessions {
-    static let appGroup = "group.com.github.wunax.strimr"
-    static let keychainService = "com.github.wunax.strimr.top-shelf"
+    static let appGroup = "group.com.github.wunax.weflix"
+    static let keychainService = "com.github.wunax.weflix.top-shelf"
     static let sessionsKey = "media.session.v2"
     static let legacySessionKey = "media.session.v1"
     static let legacyTokenKey = "media.serverToken"

@@ -24,7 +24,7 @@ struct ProfileChoice: Identifiable, Hashable {
 }
 
 extension ProfileChoice {
-    init(profile: StrimrProfile, isActive: Bool) {
+    init(profile: WeFlixProfile, isActive: Bool) {
         switch profile {
         case let .local(local):
             self.init(
@@ -57,7 +57,7 @@ extension ProfileChoice {
     }
 }
 
-/// Picks a Strimr profile to activate, or a Plex Home user of an account while adding a connection.
+/// Picks a WeFlix profile to activate, or a Plex Home user of an account while adding a connection.
 @MainActor
 @Observable
 final class ProfileSwitcherViewModel {

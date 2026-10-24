@@ -4,7 +4,7 @@ def archive_xcargs(build_number)
     "CURRENT_PROJECT_VERSION=#{build_number}"
 end
 
-def strimr_app_identifier
+def weflix_app_identifier
     identifier = ENV["FASTLANE_APP_IDENTIFIER"] || CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier)
     FastlaneCore::UI.user_error!("Missing FASTLANE_APP_IDENTIFIER") if identifier.nil? || identifier.empty?
 
@@ -82,7 +82,7 @@ platform :ios do
 
     private_lane :install_match_signing do |options|
         setup_ci if ENV["CI"]
-        app_identifier = strimr_app_identifier
+        app_identifier = weflix_app_identifier
 
         if options[:ios]
             sync_code_signing(
@@ -117,11 +117,11 @@ platform :ios do
     end
 
     private_lane :build_ios_ipa do |options|
-        app_identifier = strimr_app_identifier
+        app_identifier = weflix_app_identifier
 
         build_app(
-            project: "Strimr.xcodeproj",
-            scheme: "Strimr",
+            project: "weflix.xcodeproj",
+            scheme: "weflix",
             export_method: "app-store",
             export_options: {
                 signingStyle: "manual",
@@ -129,18 +129,18 @@ platform :ios do
                     app_identifier => ios_app_store_profile(app_identifier)
                 }
             },
-            output_name: "Strimr-iOS.ipa",
+            output_name: "weflix-iOS.ipa",
             xcargs: archive_xcargs(options[:build_number])
         )
     end
 
     private_lane :build_tvos_ipa do |options|
-        app_identifier = strimr_app_identifier
+        app_identifier = weflix_app_identifier
         top_shelf_identifier = "#{app_identifier}.topshelf"
 
         build_app(
-            project: "Strimr.xcodeproj",
-            scheme: "Strimr-tvOS",
+            project: "weflix.xcodeproj",
+            scheme: "weflix-tvOS",
             export_method: "app-store",
             export_options: {
                 signingStyle: "manual",
@@ -149,17 +149,17 @@ platform :ios do
                     top_shelf_identifier => tvos_app_store_profile(top_shelf_identifier)
                 }
             },
-            output_name: "Strimr-tvOS.ipa",
+            output_name: "weflix-tvOS.ipa",
             xcargs: archive_xcargs(options[:build_number])
         )
     end
 
     private_lane :build_macos_pkg do |options|
-        app_identifier = strimr_app_identifier
+        app_identifier = weflix_app_identifier
 
         build_mac_app(
-            project: "Strimr.xcodeproj",
-            scheme: "Strimr-macOS",
+            project: "weflix.xcodeproj",
+            scheme: "weflix-macOS",
             export_method: "app-store",
             export_options: {
                 signingStyle: "manual",
@@ -167,7 +167,7 @@ platform :ios do
                     app_identifier => macos_app_store_profile(app_identifier)
                 }
             },
-            output_name: "Strimr-macOS",
+            output_name: "weflix-macOS",
             xcargs: archive_xcargs(options[:build_number])
         )
     end
@@ -175,7 +175,7 @@ platform :ios do
     desc "Create or update Match profiles for iOS, tvOS, macOS, and Top Shelf"
     lane :prepare_match do
         api_key = app_store_connect_key
-        app_identifier = strimr_app_identifier
+        app_identifier = weflix_app_identifier
 
         sync_code_signing(
             type: "appstore",

@@ -565,7 +565,7 @@ final class JellyfinLiveTVService: MediaLiveTVService, MediaDVRService {
     }
 
     private var favoritesKey: String {
-        "strimr.jellyfin.liveTV.favorites.\(server.id).\(context.connection?.userID ?? "")"
+        "weflix.jellyfin.liveTV.favorites.\(server.id).\(context.connection?.userID ?? "")"
     }
 
     private func favoriteOrder() -> [String] {

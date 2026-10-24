@@ -17,7 +17,7 @@ final class ServerAvailabilityMonitor {
     @ObservationIgnored private var probes: [ServerIdentity: Probe] = [:]
     @ObservationIgnored private var probeTasks: [ServerIdentity: Task<Void, Never>] = [:]
     @ObservationIgnored private let pathMonitor = NWPathMonitor()
-    @ObservationIgnored private let pathQueue = DispatchQueue(label: "strimr.offline.path-monitor")
+    @ObservationIgnored private let pathQueue = DispatchQueue(label: "weflix.offline.path-monitor")
 
     private static let initialBackoff: Duration = .seconds(2)
     private static let maximumBackoff: Duration = .seconds(60)

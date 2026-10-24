@@ -33,7 +33,7 @@ final class TrackSelectionStore {
     }
 
     @ObservationIgnored private let defaults: UserDefaults
-    @ObservationIgnored private let storageKey = "strimr.trackSelections"
+    @ObservationIgnored private let storageKey = "weflix.trackSelections"
     @ObservationIgnored private let schemaVersion = 1
 
     private(set) var records: [TrackSelectionRecord]

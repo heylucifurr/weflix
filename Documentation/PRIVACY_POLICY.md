@@ -2,11 +2,11 @@
 
 Effective date: 17 August 2026
 
-This Privacy Policy explains how Strimr ("Strimr", "we", "us", or "our") handles information when you use the Strimr application on iOS, macOS, or tvOS (the "App"). Strimr is a third-party client for Plex and Jellyfin and is not affiliated with Plex, Inc. or the Jellyfin project.
+This Privacy Policy explains how WeFlix ("WeFlix", "we", "us", or "our") handles information when you use the WeFlix application on iOS, macOS, or tvOS (the "App"). WeFlix is a third-party client for Plex and Jellyfin and is not affiliated with Plex, Inc. or the Jellyfin project.
 
 ## Summary
 
-- Strimr only collects crash diagnostics to improve app stability (via Sentry).
+- WeFlix only collects crash diagnostics to improve app stability (via Sentry).
 - All information used by the App remains on your device.
 - The App communicates with Plex services or your Jellyfin server to function. Plex's handling of data is governed by Plex's privacy policy, while data handled by a Jellyfin server is controlled by that server's operator.
 
@@ -23,14 +23,14 @@ We do not collect or process:
 
 ## Information Stored On Your Device
 
-Strimr stores only the minimum data required for the App to function. This information is stored locally on your device and is not transmitted to us. Specifically:
+WeFlix stores only the minimum data required for the App to function. This information is stored locally on your device and is not transmitted to us. Specifically:
 
 - Authentication tokens used to access your Plex account or Jellyfin server through the App
 - App settings and preferences
 
 ## How the App Communicates
 
-The App connects directly to Plex services or your Jellyfin server to retrieve and display your media. All requests are made from your device to the selected service or server. Strimr does not operate servers that collect or relay your data.
+The App connects directly to Plex services or your Jellyfin server to retrieve and display your media. All requests are made from your device to the selected service or server. WeFlix does not operate servers that collect or relay your data.
 
 For details about Plex and Jellyfin data practices, review:
 
@@ -39,11 +39,11 @@ For details about Plex and Jellyfin data practices, review:
 
 ## Data Retention
 
-Strimr retains local data only for as long as you keep the App installed or until you remove the data. You can delete this information by signing out or uninstalling the App.
+WeFlix retains local data only for as long as you keep the App installed or until you remove the data. You can delete this information by signing out or uninstalling the App.
 
 ## Your Choices
 
-You control all data stored by Strimr. You can:
+You control all data stored by WeFlix. You can:
 
 - Sign out of the App to remove your authentication token
 - Reset or change settings at any time
