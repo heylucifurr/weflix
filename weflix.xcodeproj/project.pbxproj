@@ -103,6 +103,7 @@
 		E9C449F82EF322DE00D2895B /* Exceptions for "Shared" folder in "weflix-tvOS" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Config/WeFlixServer.swift,
 				Domain/Aggregated.swift,
 				Domain/CatalogModels.swift,
 				Domain/LiveTVModels.swift,
@@ -128,6 +129,12 @@
 				Features/Auth/ServerSelection/CustomServerAddressView.swift,
 				Features/Auth/ServerSelection/ServerConnectionSummary.swift,
 				Features/Auth/ServerSelection/ServerSelectionViewModel.swift,
+				Features/Auth/WeFlixAccount/WeFlixAppGate.swift,
+				Features/Auth/WeFlixAccount/WeFlixAuthClient.swift,
+				Features/Auth/WeFlixAccount/WeFlixDeviceTokenStore.swift,
+				Features/Auth/WeFlixAccount/WeFlixSessionController.swift,
+				Features/Auth/WeFlixAccount/WeFlixSignInView.swift,
+				Features/Auth/WeFlixAccount/WeFlixSignedInView.swift,
 				Features/AutomaticRefreshGate.swift,
 				Features/CollectionDetail/CollectionDetailViewModel.swift,
 				Features/Favorites/FavoritesView.swift,
@@ -931,7 +938,6 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = weflixTopShelf/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = weflixTopShelf;
-				PRODUCT_BUNDLE_IDENTIFIER = "me.weflix.topShelf";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -939,6 +945,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.3.2;
+				PRODUCT_BUNDLE_IDENTIFIER = me.weflix.topShelf;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = appletvos;
 				SKIP_INSTALL = YES;
@@ -964,7 +971,6 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = weflixTopShelf/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = weflixTopShelf;
-				PRODUCT_BUNDLE_IDENTIFIER = "me.weflix.topShelf";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -972,6 +978,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.3.2;
+				PRODUCT_BUNDLE_IDENTIFIER = me.weflix.topShelf;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "match AppStore $(PRODUCT_BUNDLE_IDENTIFIER) tvos";
 				SDKROOT = appletvos;

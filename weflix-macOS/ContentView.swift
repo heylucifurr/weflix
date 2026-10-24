@@ -1,6 +1,30 @@
 import SwiftUI
 
 struct ContentView: View {
+    init() {
+        ErrorReporter.start()
+    }
+
+    var body: some View {
+        ZStack {
+            Color("Background").ignoresSafeArea()
+
+            // 2026-10-24 — this is where "Choose a service" used to be. A fresh install landed on
+            // `AccountSetupView(purpose: .firstLaunch, …)` and picked Plex or Jellyfin from there; the app is a
+            // native client of the **WeFlix server** now (`docs/PROJECT.md`), so the root is a WeFlix sign-in
+            // and nothing else. The Plex/Jellyfin root that used to be here is kept below, unreachable.
+            WeFlixAppGate()
+        }
+    }
+}
+
+/// The Plex/Jellyfin root this app had before it became a WeFlix client (2026-10-24).
+///
+/// **Kept, and deliberately not reachable.** `ContentView` shows `WeFlixAppGate()` instead: the app holds no
+/// Plex or Jellyfin credentials of its own any more and never talks to plex.tv or to a media server directly.
+/// This view stays compiled — so it cannot rot unnoticed — beside the Plex and Jellyfin code it uses, until the
+/// step that removes them.
+private struct PlexLibraryRootView: View {
     @Environment(\.openWindow) private var openWindow
     @Environment(SessionManager.self) private var sessionManager
     @Environment(ServerRegistry.self) private var registry
@@ -11,10 +35,6 @@ struct ContentView: View {
     @Environment(OfflineCoordinator.self) private var offlineCoordinator
     @Environment(ExternalPlaybackCallbackRouter.self) private var externalPlaybackCallbackRouter
     @Environment(\.scenePhase) private var scenePhase
-
-    init() {
-        ErrorReporter.start()
-    }
 
     var body: some View {
         ZStack {
@@ -104,3 +124,4 @@ struct ContentView: View {
         }
     }
 }
+
