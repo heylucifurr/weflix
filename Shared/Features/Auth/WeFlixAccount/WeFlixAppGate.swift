@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The app's root: **sign in to WeFlix, and then the requests** (PHASE APP-GATEWAY A4, revised 2026-10-25).
+/// The app's root: **sign in to WeFlix, and then the real app** (PHASE APP-GATEWAY A4).
 ///
 /// This is where the old entry point was. The root view used to ask `SessionManager` which Plex or Jellyfin
 /// screen to show, and a fresh install landed on `AccountSetupView(purpose: .firstLaunch, …)` — the
@@ -15,13 +15,14 @@ import SwiftUI
 /// | | What it is | Where it comes from |
 /// |---|---|---|
 /// | **signed in to WeFlix?** | an email and password, or a device token in the Keychain | `WeFlixSessionController` |
-/// | **may this account request?** | the `requests` block of `GET /api/app/me` | `SeerrStore.adopt()` |
+/// | **is the library up?** | the app's own account, profile and connected server | `SessionManager` |
 ///
-/// Until 2026-10-25 the signed-in screen was the library, and it needed `SessionManager` to have adopted the
-/// account and connected a server. **Now it is the requests screen**, because that is what a friend can use
-/// today: `requests.enabled` decides whether there is anything to show, and library browsing is a later task.
-/// The account is still adopted (so the gateway, the stream ticket and the "your sign-in has ended" detection
-/// all keep working), but nothing waits for it, and the screen no longer depends on it.
+/// A WeFlix sign-in is not on its own enough to show a library: the app needs an account, a profile and a server
+/// session, which is what `SessionManager.adoptWeFlixAccount()` builds out of the sign-in (`weflix.me` as one
+/// Plex-shaped server). So on `.signedIn` the gate adopts the account, and when `SessionManager` answers `.ready`
+/// it hands the screen over to the platform's own main UI — `MainTabView` on iOS, the library root on macOS and
+/// tvOS — passed in as `ready`. Until then the signed-in card (`WeFlixSignedInView`) says who is signed in and
+/// offers sign-out, so a slow connection never looks like a dead end.
 ///
 /// Three states before that, and the third is a spinner:
 ///
@@ -33,12 +34,19 @@ import SwiftUI
 struct WeFlixAppGate<Ready: View>: View {
     @Environment(SessionManager.self) private var sessionManager
     @Environment(ServerRegistry.self) private var registry
+    /// The requests, so the server's answer about them can be taken as it arrives (2026-10-25).
+    ///
+    /// **It is read here and used elsewhere**: the gate does not change what it shows because of requests. The
+    /// signed-in screen is the library, and the requests appear inside it — the Seerr tab and the sidebar entry
+    /// light up when `isRequestsEnabled` is true, exactly as they did before this work. That is deliberate: on
+    /// 2026-10-25 an earlier version of this file made the *requests* the signed-in screen, which turned a
+    /// server that did not yet have the feature into a dead end for every signed-in person.
     @Environment(SeerrStore.self) private var seerrStore
     @State private var session = WeFlixSessionController()
-    /// The platform's own main UI — the requests root on iOS, macOS and tvOS. Shown only when signed in.
-    @ViewBuilder private let ready: (WeFlixSessionController) -> Ready
+    /// The platform's own main UI — iOS's tabs, macOS's and tvOS's library roots. Shown only when the library is up.
+    @ViewBuilder private let ready: () -> Ready
 
-    init(@ViewBuilder ready: @escaping (WeFlixSessionController) -> Ready) {
+    init(@ViewBuilder ready: @escaping () -> Ready) {
         self.ready = ready
     }
 
@@ -62,13 +70,8 @@ struct WeFlixAppGate<Ready: View>: View {
 
                 Task { await adopt() }
             }
-            // The server's answer about requests is what the main screen hangs on, so it is taken as it arrives —
-            // at launch, and again after a password sign-in.
-            .onChange(of: session.requests) { _, requests in
-                Task { await seerrStore.adopt(requests: requests, displayName: session.displayName) }
-            }
             // A WeFlix sign-in that the server no longer accepts comes back to the sign-in screen with a sentence
-            // instead of leaving the person on a screen that says the server did not respond. Two sources: the
+            // instead of leaving the person on a home screen that says the server did not respond. Two sources: the
             // gateway marks its link `.needsReauthentication` on a `401`, and the requests proxy posts
             // `.weflixSignInEnded` from the one place its calls are validated.
             .onChange(of: weflixSignInHasEnded, initial: true) { _, hasEnded in
@@ -81,13 +84,26 @@ struct WeFlixAppGate<Ready: View>: View {
                 seerrStore.clear()
                 session.reportSignInEnded()
             }
-            // A sign-out must take the requests with it: the id, the quota and the name belong to the account
-            // that just left.
+            // The server's answer about requests is what the Seerr tab and the requests screens hang on, so it is
+            // taken as it arrives — at launch, and again after a password sign-in. It changes nothing about what
+            // this gate shows (see `seerrStore` above).
+            .onChange(of: session.requests) { _, requests in
+                Task { await seerrStore.adopt(requests: requests, displayName: session.displayName) }
+            }
+            // A sign-out must take the requests with it: the id, the quota and the name belong to the account that
+            // just left.
             .onChange(of: isSignedOut) { _, signedOut in
                 guard signedOut else { return }
 
                 seerrStore.clear()
             }
+    }
+
+    /// Is the app looking at anything but a signed-in screen? Used to take the requests down with a sign-out.
+    private var isSignedOut: Bool {
+        if case .signedIn = session.status { return false }
+
+        return true
     }
 
     /// Has the server refused the WeFlix account's token? (`ServerRegistry` marks the link `.needsReauthentication`
@@ -101,13 +117,6 @@ struct WeFlixAppGate<Ready: View>: View {
         return registry.linkStatuses[account.id] == .needsReauthentication
     }
 
-    /// Is the app looking at anything but a signed-in screen? Used to take the requests down with a sign-out.
-    private var isSignedOut: Bool {
-        if case .signedIn = session.status { return false }
-
-        return true
-    }
-
     @ViewBuilder
     private var content: some View {
         switch session.status {
@@ -118,12 +127,26 @@ struct WeFlixAppGate<Ready: View>: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         case .signedOut:
             WeFlixSignInView(session: session)
-        case .signedIn:
-            // No wait for the library: what is on screen is the requests, and `requests.enabled` is what decides
-            // whether there is anything in them. The account is still adopted behind this (see `adopt()`), so the
-            // gateway keeps working and a token the server refuses still returns to the sign-in screen.
-            ready(session)
+        case let .signedIn(user):
+            if sessionManager.status == .ready {
+                ready()
+                    .transition(.opacity)
+            } else if let profile = sessionManager.activeProfile {
+                // The app's own activation screen: it names the profile and the phase it is in, so a slow
+                // connection reads as "working on it" rather than as a dead end.
+                ProfileActivationView(profile: profile)
+                    .transition(.profileActivation)
+            } else {
+                WeFlixSignedInView(user: user, isWorking: session.isWorking) {
+                    Task {
+                        await session.signOut()
+                        // The account, its link and its token go with the sign-out: leaving them behind is how a
+                        // second person's sign-in ended up on the first person's profile (2026-10-24).
+                        sessionManager.forgetWeFlixAccount()
+                    }
+                }
                 .transition(.opacity)
+            }
         }
     }
 

@@ -10,8 +10,8 @@ import SwiftUI
 /// | `requests.enabled: true` | *Requests — connected via WeFlix*, which Overseerr account it is linked as, and the quota left |
 /// | `requests.enabled: false` | *Requests aren't set up for your account yet. Ask Luther.* |
 ///
-/// Signing out of WeFlix is on the main screen (`WeFlixRequestsRootView`'s Settings tab), not here: it is the
-/// app's only sign-out, and putting a second one behind a settings page would be two doors to one room.
+/// Signing out of WeFlix is in the Settings tab of the library UI, not here: it is the app's only sign-out, and
+/// putting a second one behind a settings page would be two doors to one room.
 @MainActor
 struct SeerrView: View {
     @Environment(SeerrStore.self) private var seerrStore

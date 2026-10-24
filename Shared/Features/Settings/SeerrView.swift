@@ -16,7 +16,7 @@ import SwiftUI
 /// | `requests.enabled: false` | *Requests aren't set up for your account yet. Ask Luther.* |
 ///
 /// There is no "sign out of Seerr" here either: signing out of **WeFlix** is the only sign-out the app has, and
-/// it lives on the main screen's own account menu (`WeFlixRequestsRootView`).
+/// it lives in Settings (`Shared/Features/Settings/SettingsView.swift`) — the same place it always did.
 @MainActor
 struct SeerrView: View {
     @Environment(SeerrStore.self) private var seerrStore
@@ -64,13 +64,21 @@ struct SeerrView: View {
         .navigationTitle("integrations.seerr.title")
     }
 
-    /// The one sentence this screen is really about. "Connected via WeFlix" is the whole story: there is no
-    /// second service to connect, no key to paste and no address to remember — the WeFlix account *is* the
-    /// requests account.
+    /// The one sentence this screen is really about.
+    ///
+    /// **Three states, three sentences** — and the middle one is the one that was wrong on 2026-10-25: a WeFlix
+    /// that has not been updated to answer `requests` at all must never be reported as *this account's* fault.
     private var statusText: String {
-        seerrStore.isRequestsEnabled
-            ? "Connected via WeFlix"
-            : "Requests aren't set up for your account yet. Ask Luther."
+        switch seerrStore.requestsState {
+        case .enabled:
+            // The whole story: there is no second service to connect, no key to paste and no address to
+            // remember — the WeFlix account *is* the requests account.
+            "Connected via WeFlix"
+        case .notLinked:
+            "Requests aren't set up for your account yet. Ask Luther."
+        case .unknown:
+            "This WeFlix server does not have requests yet. Ask Luther to update WeFlix."
+        }
     }
 }
 

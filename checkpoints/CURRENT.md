@@ -1,4 +1,71 @@
-## PHASE APP-REQUESTS — sign in, and the requests are already there (2026-10-25, Cline)
+## CORRECTION — the dead end I shipped, and what is back (2026-10-25, Cline)
+
+**Luther, minutes after the previous entry was pushed:** *"what the hell happened?? this is wrong
+implimentation. when i sign it says Request arent setup for this account .... THIS IS WRONG. put back the previous
+working. This is not what i want. CRITICAL ERROR"*
+
+**He was right, and the cause was mine.** The previous commit made the **requests the signed-in screen**. The app
+ships pointed at `https://weflix.me` — production — and production is at `5428f0ea`, which **does not have the
+server half of this feature**. Measured, not assumed:
+
+```text
+prod  https://weflix.me/api/health                      -> commit 5428f0ea…      (main was not merged)
+prod  /api/app/seerr/api/v1/search                      -> 404                   (the route does not exist there)
+beta  https://beta.weflix.me/api/health                 -> commit 940fc3a…
+beta  /api/app/seerr/api/v1/search                      -> 401                   (the route exists)
+```
+
+So on production `GET /api/app/me` carries no `requests` block, it decoded as `nil`, and one flag collapsed
+*"the server has not answered"* with *"this account is not linked"* — which is why a signed-in person was told
+**"Requests aren't set up for your account yet. Ask Luther."** by a server that had never heard of requests. A
+signed-in app whose *only* screen was a dead end. That is the whole bug, and it was a design error, not a
+typo: **I made the app's default screen depend on a server change that was not deployed.**
+
+### What is restored
+
+The **previous working main screen is back, exactly**: sign in → the library (`MainTabView` / `MainView` /
+tvOS `MainTabView`), with the requests reachable inside it through the Seerr tab and the sidebar entry, which
+appear only when the server says this account may use them.
+
+`weflix-iOS/Features/ContentView.swift`, `weflix-macOS/ContentView.swift`, `weflix-tvOS/ContentView.swift` and
+`Shared/Features/Auth/WeFlixAccount/WeFlixSignedInView.swift` are **byte-identical to `2b0e68c`** (verified:
+`git diff 2b0e68c -- <those files>` is empty). `WeFlixAppGate`'s `content` is back to the old switch
+(spinner → sign-in → library-when-ready / activation / signed-in card); the only additions to it are ones that
+cannot change what it shows: the `SeerrStore` reference, the `requests` adoption, the `.weflixSignInEnded`
+observer, and clearing the requests on a sign-out. `WeFlixRequestsRootView.swift` — the wrapper that made the
+requests the root — is **deleted**, and its `project.pbxproj` entry with it.
+
+### What is fixed, so it cannot happen again
+
+`SeerrStore` no longer has one flag. `requestsState` has three values, and the app says three different things:
+
+| `requestsState` | When | What the app says |
+|---|---|---|
+| `.unknown` | no answer yet: a launch in flight, **or a WeFlix that predates the feature** | *"This WeFlix server does not have requests yet. Ask Luther to update WeFlix."* |
+| `.notLinked` | the server answered, and the account has no linked Overseerr user | *"Requests aren't set up for your account yet. Ask Luther."* |
+| `.enabled` | the server answered, and this account may browse and request | the requests UI appears; Settings says *Connected via WeFlix* |
+
+**A server that has not been updated is never reported as the account's fault again**, and no screen of this app
+is a dead end: the signed-in screen is the library, which does not depend on requests at all.
+
+### Gate
+
+iOS simulator **BUILD SUCCEEDED** · tvOS **BUILD SUCCEEDED** · macOS **BUILD SUCCEEDED** (0 errors each) ·
+`xcodebuild test -scheme weflix-macOS` **TEST SUCCEEDED, exit 0**. Simulator: built, installed and launched on
+the iPhone 17 Pro; the runtime UI snapshot shows the sign-in screen on a fresh launch (no stored token, and no
+typing tool or test credential was available to me to drive a sign-in — so the *signed-in* screen is verified by
+the git-identical restore above, not by a screenshot).
+
+### Kept from the previous commit
+
+Everything that does not depend on the server half being deployed: the bearer-only proxy client
+(`SeerrNetworkClient` → `WeFlixServer.seerrBaseURL`), `SeerrStore`, `SeerrAccountRepository`, the deletion of
+Seerr's own sign-in/address/key/cookie plumbing, the plain-language errors and the `401` → sign-in screen, the
+read-only Settings row, **Settings → Licences** and the README attribution, and the removal of the test site's
+address from this repository. The **server** half stays on WEB's `Development` (deployed to the pre-production
+deployment); turning the feature on for everyone is the `Development → main` merge, which is Luther's call and
+was not made.
+
 
 **The delivery:** *"A friend installs the WeFlix app, signs in with their WeFlix account, and can browse requests
 and request movies/shows immediately, with no setup."* The client half is in `a23a421`; the server half is in the

@@ -38,10 +38,17 @@ struct IntegrationsView: View {
         }
     }
 
+    /// Three states, three sentences — and the middle one is the one that was wrong on 2026-10-25: a WeFlix that
+    /// has not been updated to answer `requests` at all must never be reported as *this account's* fault.
     private var seerrStatusText: String {
-        seerrStore.isRequestsEnabled
-            ? "Connected via WeFlix"
-            : "Requests aren't set up for your account yet. Ask Luther."
+        switch seerrStore.requestsState {
+        case .enabled:
+            "Connected via WeFlix"
+        case .notLinked:
+            "Requests aren't set up for your account yet. Ask Luther."
+        case .unknown:
+            "This WeFlix server does not have requests yet. Ask Luther to update WeFlix."
+        }
     }
 
     private func integrationCard(
