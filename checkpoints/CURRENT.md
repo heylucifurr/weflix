@@ -1,3 +1,71 @@
+## PHASE APP-GATEWAY — the second report: no posters, and "server unavailable" (2026-10-24, Cline)
+
+**Luther:** *"i check sample user on simulator. i notice theres no movie posters or images. then i logged in to my
+account. same. then i click one movie then it says server unavailable."* Three unrelated causes, all found by
+measuring on the simulator rather than reasoning from the code. Fixed in `ebbca0f` (client) and `01fdff7` (server).
+
+### 1. No artwork: a card could not find its server
+
+`ServerIdentity` is the key `ServerRegistry` stores a server under, and **every media item carries the context's
+`serverIdentifier` as its server**. The account fix two rounds earlier made the registry's identity per account
+(`weflix-gateway.weflix:2`) but left the resource's identifier as the plain machine identifier, so a card asked for
+"the artwork service of server `weflix-gateway`" and found nothing — no placeholder request, no network traffic.
+
+Measured: the app's own cache had **`artwork: 0`** rows while `media: 179` had been fetched, and no artwork URL was
+ever requested. `selectGateway(accountID:)` now receives the same string as the registry identity, and
+`testTheGatewayResourceIdentifierIsTheIdentityTheItemsCarry` pins the invariant. After the fix: **34 artwork rows**,
+17 fetches, all `200`.
+
+### 2. Artwork carried no credential
+
+Five places download images themselves — `ArtworkResourceView` (a `.url` resource), `CachedArtworkService`,
+`CachedLibraryService`'s previews, `ImageCornerColorSampler`, `DownloadManager` — and only one had been taught the
+bearer header. They now share `WeFlixGatewayURL.artworkRequest(for:)`, which adds it **only** for WeFlix's host.
+
+### 3. A loop that starved the app
+
+`WeFlixAppGate` had two `.task` modifiers attached to a view whose *type* changes as the sign-in state moves
+(spinner → form → signed-in), so every state change tore the subtree down and restarted both tasks: measured
+`GET /api/app/me` six times in ninety seconds, adoption re-saving the account each cycle, and every other request
+cancelled mid-flight — leaving a home screen served entirely from cache. One stable container (`ZStack { content }`),
+one `.task`, and adoption driven by `.onChange(of: session.status)`.
+
+### 4. The detail screen: the gateway refused the app's own query keys (server, `01fdff7`)
+
+```text
+before   /api/plex/library/metadata/4292?checkFiles=1&includeStreams=1&includeChapters=1&includeMarkers=1&includeOnDeck=1
+             -> 400 {"error":"Unsupported Plex query"}      ← the app showed "server unavailable"
+         /api/plex/library/metadata/4292?includeMarkers=1
+             -> 200
+after    the app's exact request -> 200 (verified on beta once the deploy finished)
+```
+
+The whitelist was written from the *browser's* traffic; `MetadataRepository` sends five switches and only
+`includeMarkers` was on it. Added, all Plex's documented switches: `checkFiles`, `includeStreams`,
+`includeChapters`, `includeOnDeck`, `includeMeta` (browse), `contentDirectoryID` (hub rows), `title` (subtitle
+search). Credentials stay refused, and an unanticipated key still is too.
+
+### Diagnostics, and how they were removed
+
+`log show` in the simulator did not surface the app's `NSLog`, so the probes wrote a file in the app's container
+(`Documents/weflix-diag.log`) that could be read from the host — that is how the loop counts, the identity
+mismatch, and the artwork path were measured. **Every probe was deleted** (`Shared/Features/Auth/WeFlixAccount/WeFlixDiag.swift` no
+longer exists) and the shipped tree is verified clean of them.
+
+### Gate
+
+macOS suite **exit 0** (416 cases, including 19 in `WeFlixGatewayURLTests`) · iOS signed build 0 errors ·
+tvOS build 0 errors · server tsc 0, 28/28 in the gateway/proxy suites, lint 21 (9/12) = baseline · beta deployed
+`01fdff7` and answers the app's detail request with `200`.
+
+### Still not proved by a tap
+
+Opening a title **in the app** and pressing play. This harness has no tap/type tool and macOS refuses `osascript`
+keystrokes, so the two remaining confirmations are Luther's: a poster on the home screen, and a film playing. What
+is proved: the library renders, artwork fetches 200 and is cached, the detail request the screen depends on is
+answered by the gateway, and a real 3.1 GB direct play streams through `/api/video` with a ticket.
+
+
 ## PHASE APP-GATEWAY — the reported bug: a second WeFlix user landed on the first user's profile (2026-10-24, Cline)
 
 **Luther, after the delivery:** *"I signed in as melvie. after that the homepage says Your server did not respond.
