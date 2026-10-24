@@ -50,8 +50,12 @@ and the Strimr attribution in `README.md` are untouched, as instructed.
 - **The password is dropped from memory as soon as the answer arrives**, and the fields are cleared on sign-out.
 - **The Sign In button is WeFlix red in both states** — an empty form dims it (45 %) rather than draining the
   colour, so the screen reads as WeFlix before anything is typed.
-- **The screen is English literals, not lookup keys.** `Localizable.xcstrings` has no entries for the new screen,
-  and `String(localized:)` with a missing key prints the key itself. Localisation is a question below.
+- **The screen is English literals, not lookup keys**, and Xcode's own extraction put them in
+  `Localizable.xcstrings` during the builds (measured: `"Sign in"`, `"Sign In"`, `"Sign Out"`,
+  `"Signed in as %@"`, `"Username or email"`, `"Password"`, `"Use your WeFlix account."`,
+  `"WeFlix account"`, `"WeFlix owner account"`, `"Tap to dismiss"`, with auto-generated comments and **no
+  translations yet**). So the wording is registered and translatable; fr and zh-Hans are the follow-up, not a
+  rewrite.
 - **`WeFlixAuthClient` takes its `baseURL` and `URLSession` as parameters** so the stub tests can exist.
   Production passes the defaults (`WeFlixServer.baseURL`, `.shared`).
 
@@ -122,8 +126,8 @@ answer, and an `app_devices` row for the owner exists on the beta that **I did n
 3. **The owner's leftover token in the simulator.** The Keychain session that made this simulator come up signed
    in as *Lucifurr* was not created by me and is **not revoked** (an `app_devices` row on the server). Tapping
    Sign Out in the app ends it; the pending test account is one click to reject, too.
-4. **Localisation.** The new screen is English literals; the rest of the app is translated (fr, zh-Hans) through
-   `Localizable.xcstrings`. Add entries once the wording is agreed, or leave the client English-only?
+4. **Localisation.** The new screen's strings are extracted into `Localizable.xcstrings` with auto-generated
+   comments and no translations; fr and zh-Hans are the follow-up once the wording is agreed.
 5. **A temporary-password account** (`mustChangePassword`) signs in here and is not forced to change anything —
    there is no password screen in the app yet. Should the app refuse until there is one?
 6. **`README.md` still describes a Plex/Jellyfin client**, and the App Store links still point at Strimr. It was
