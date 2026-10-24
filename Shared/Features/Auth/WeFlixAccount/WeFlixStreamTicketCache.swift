@@ -43,7 +43,9 @@ final class WeFlixStreamTicketCache: @unchecked Sendable {
     /// Fetch a fresh one if the current one is missing or nearly over. Answers whether a usable ticket is in hand.
     ///
     /// A failure is not an error worth surfacing here: the caller is about to build a URL that will simply be
-    /// refused, and the app's own error path says so in words.
+    /// refused, and the app's own error path says so in words. `@MainActor` because its client is one, and every
+    /// caller is on the main actor already (the app's repositories are).
+    @MainActor
     @discardableResult
     func refreshIfNeeded(deviceToken: String?, client: WeFlixAuthClient = WeFlixAuthClient()) async -> Bool {
         if current() != nil {

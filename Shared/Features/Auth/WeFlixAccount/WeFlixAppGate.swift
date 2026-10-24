@@ -70,6 +70,11 @@ struct WeFlixAppGate<Ready: View>: View {
             if sessionManager.status == .ready {
                 ready()
                     .transition(.opacity)
+            } else if let profile = sessionManager.activeProfile {
+                // The app's own activation screen: it names the profile and the phase it is in, so a slow
+                // connection reads as "working on it" rather than as a dead end.
+                ProfileActivationView(profile: profile)
+                    .transition(.profileActivation)
             } else {
                 WeFlixSignedInView(user: user, isWorking: session.isWorking) {
                     Task { await session.signOut() }

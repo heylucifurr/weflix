@@ -50,6 +50,10 @@ final class WeFlixSessionController {
         guard !isWorking else { return }
 
         guard let token = store.token() else {
+            // PHASE APP-GATEWAY: a build that was pointed at a test deployment can also sign itself in for a live
+            // proof, which is the only way a simulator with no keyboard automation can reach the library.
+            if await signInFromEnvironment() { return }
+
             status = .signedOut
 
             return
@@ -108,6 +112,28 @@ final class WeFlixSessionController {
         } catch {
             errorMessage = WeFlixAuthError.unreachable.message
         }
+    }
+
+    /// `WEFLIX_TEST_IDENTIFIER` + `WEFLIX_TEST_PASSWORD`: sign in without a keyboard (PHASE APP-GATEWAY's live proof).
+    ///
+    /// The variables are read **only when there is no stored token**, so they can never replace a real sign-in, and
+    /// nothing in a shipped configuration sets them — a build proves itself end to end on a simulator only when
+    /// whoever ran it passed credentials in the environment. The same two variables the macOS scheme's live tests
+    /// already use (`weflixTests/…/WeFlixLiveAuthTests.swift`), with the same rule: they are never committed.
+    ///
+    /// Answers whether a sign-in came back, so `start()` can fall through to the sign-in screen when they are absent.
+    private func signInFromEnvironment() async -> Bool {
+        let environment = ProcessInfo.processInfo.environment
+
+        guard let testIdentifier = environment["WEFLIX_TEST_IDENTIFIER"], !testIdentifier.isEmpty,
+              let testPassword = environment["WEFLIX_TEST_PASSWORD"], !testPassword.isEmpty
+        else { return false }
+
+        identifier = testIdentifier
+        password = testPassword
+        await signIn()
+
+        return status != .signedOut
     }
 
     /// Sign out: tell the server, then forget the token locally whether or not it answered.
