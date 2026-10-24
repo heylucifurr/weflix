@@ -53,12 +53,22 @@ errors** · tvOS build **0 errors** · `WeFlixGatewayURLTests` **16/16** (5 new:
 another person's profile, a second sign-in is a no-op, the stale name is repaired, a multi-link profile is not
 renamed, and two accounts have two identities).
 
+### The dead end on the home screen, fixed too (`e54a22b`)
+
+"Your servers did not respond" offered nothing to act on. The app is a WeFlix client with one sign-in, so there is
+exactly one useful answer: `WeFlixSessionController.reportSignInEnded()` clears the dead token, says *"Your WeFlix
+sign-in has ended. Sign in again."*, and returns to the sign-in screen — and `WeFlixAppGate` calls it when
+`ServerRegistry` marks the WeFlix account `.needsReauthentication` (which the registry already does when a request
+is answered `401`, and `connectGateway` does when the account has no token to connect with).
+
 ### Still open (needs Luther's answer, not more code)
 
-If the home *still* says "Your servers did not respond" after this fix, the reason is Melvie's **account**, not the
-wiring: a pending or disabled WeFlix account is refused by the gateway (`401`), and the app's home shows its generic
-wording instead of the server's own sentence. That message improvement is worth doing — with the evidence of which
-refusal it is.
+If the home says something is wrong after this, the reason is now **Melvie's account**, not the wiring: a pending
+or disabled WeFlix account is refused by the gateway (`401`), so the app will now say the sign-in has ended and ask
+for it again rather than blaming the network. The discriminating check: sign in as Melvie on **beta.weflix.me in a
+browser** — if the web UI shows her no libraries either, the account itself needs approving, and the app is behaving
+correctly. What the app should do *instead* of asking for a sign-in (show the server's own sentence — "your account
+is waiting for approval") is worth doing with that evidence in hand.
 
 
 ## PHASE APP-GATEWAY — A1–A5: the sign-in becomes a library, proved on a simulator (2026-10-24, Cline)
