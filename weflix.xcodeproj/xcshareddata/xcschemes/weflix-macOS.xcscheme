@@ -36,7 +36,7 @@
          </EnvironmentVariable>
          <EnvironmentVariable
             key = "WEFLIX_TEST_BASE_URL"
-            value = "https://beta.weflix.me"
+            value = "https://weflix.me"
             isEnabled = "NO">
          </EnvironmentVariable>
       </EnvironmentVariables>

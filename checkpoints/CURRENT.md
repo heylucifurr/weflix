@@ -102,7 +102,7 @@ is `"NO"` now. **No credential is committed**: the pass above used the variables
 | A signed-in token shows the placeholder | **verified** — screenshot: *Signed in as Lucifurr* · *WeFlix owner account* · Sign Out, with `GET /api/app/me` answering from the beta |
 | Relaunch stays signed in | **verified** — terminate, install, launch; the placeholder returns from the Keychain token, twice in a row |
 | Sign Out returns to Sign in | **not verified in the UI.** The tap could not be driven: this machine's Accessibility permission is not granted (*"osascript is not allowed to send keystrokes"*) and `simctl` has no input command, so the simulator's UI can be observed here but not typed into. Verified instead: the server half (logout revokes the row, and a revoked token is `401`) and the client half (`.unauthenticated` → the sign-in screen, pinned by the offline tests) |
-| **Against production, today** | **verified** — screenshot: with `baseURL = https://weflix.me` the app shows the sign-in screen and *"This WeFlix server does not have the app's sign-in yet. Ask Luther to update WeFlix."*, because `/api/app/*` is a `404` there until `Development` is merged into `main`. It is exactly the state described above, and the app says so instead of blaming the network |
+| **Against production, today** | **verified, twice.** (a) *Before* the merge: with `baseURL = https://weflix.me` the app showed the sign-in screen and *"This WeFlix server does not have the app's sign-in yet. Ask Luther to update WeFlix."*, because `/api/app` was a `404` there. (b) *After* Luther merged `Development` → `main` (`5428f0e`) and production redeployed it: the app launched against `https://weflix.me`, called `GET /api/app/me` on production, and came up **"Signed in as Melvie Ramos · WeFlix account"** (screenshot) — a real server answer, rendered from the Keychain token |
 
 **A live session was already in this simulator's Keychain.** When the app was installed and launched for this
 pass it came up **already signed in as Lucifurr (owner)**: a WeFlix device token was in the simulator's Keychain
@@ -115,17 +115,19 @@ answer, and an `app_devices` row for the owner exists on the beta that **I did n
 
 ### Questions for Luther
 
-1. **`Development` → `main`, so the app works against production.** `weflix.me` is deployed from `main`
-   (`e53ce44`), which does not have `/api/app/*`: it answers `404`. The app now ships pointing at production, so
-   until that merge it shows *"This WeFlix server does not have the app's sign-in yet."* Beta, which does have the
-   routes, is fully verified — see the other repository's checkpoint for the curl-level pass.
-2. **The `disabled` case, live.** Signing in as a switched-off account is the one branch nothing but your Admin
-   → Users click can produce: approve `cline-pending-check@example.invalid` (the throwaway sign-up this pass
-   made) and then disable it, or disable `user@sample.com` for a minute — either way I can close it with one
-   request. Until then it is pinned structurally only.
-3. **The owner's leftover token in the simulator.** The Keychain session that made this simulator come up signed
-   in as *Lucifurr* was not created by me and is **not revoked** (an `app_devices` row on the server). Tapping
-   Sign Out in the app ends it; the pending test account is one click to reject, too.
+1. **Done — thank you.** `Development` → `main` landed (`origin/main` = `5428f0e`), production (`weflix.me`) now
+   serves `5428f0e` and the whole cycle was re-verified against it: the app's four live tests pass with **no**
+   base-URL override (so they talked to production), and the simulator came up *"Signed in as Melvie Ramos"* from
+   a real `GET /api/app/me` on production. The `404` sentence stays in the code as a guard for the next time the
+   two branches drift apart.
+2. **The `disabled` case is now verified live** — `cline-pending-check@example.invalid`, with its correct
+   password, answers **`403` · "This account has been disabled. Ask Luther to switch it back on."** on the beta
+   (same database as production), and that sentence is only reachable after the password verified. Every branch
+   the client can receive has now been seen from the real server.
+3. **Two accounts' tokens are in this simulator's Keychain** — *Lucifurr* (earlier) and now **Melvie Ramos**,
+   neither created by me: no credential of mine is stored anywhere, and the two sign-ins on that simulator were
+   somebody else's (yours or an earlier session's). Both `app_devices` rows are live; Sign Out in the app ends
+   the one in hand.
 4. **Localisation.** The new screen's strings are extracted into `Localizable.xcstrings` with auto-generated
    comments and no translations; fr and zh-Hans are the follow-up once the wording is agreed.
 5. **A temporary-password account** (`mustChangePassword`) signs in here and is not forced to change anything —
