@@ -137,7 +137,32 @@ answer, and an `app_devices` row for the owner exists on the beta that **I did n
 7. **The tests only run on the macOS scheme.** The `weflix` (iOS) scheme's `TestAction` lists no testables, so
    there is no one-command iOS test run. Add the same `TestableReference` to it?
 
-## Next step — PHASE APP-GATEWAY (planned, awaiting Luther's approval)
+## Next step — PHASE APP-GATEWAY, client tasks A1–A5 (plan approved by Luther, 2026-10-24)
+
+Luther: *"weflix custom plex is only a skin ui. the real backend is still plex. so basically we strimr is stil
+talking to plex. only via weflix.me"*. The plan is `plex-custom-frontend/phases/active/PHASE-APP-GATEWAY.md`; its
+**server tasks S1–S4 are built, pushed and verified live** (see that repo's checkpoint: an app bearer token reads
+`/api/plex/library/sections/all` and gets Luther's real libraries).
+
+**Client progress in this repository**
+
+| Task | State |
+|---|---|
+| **A1** — one gateway, in one place | **done** — `WeFlixServer.gatewayPath`/`gatewayBaseURL`/`gatewayMachineIdentifier`; `ServerAccessSnapshot.speaksToGateway`; `PlexServerNetworkClient` sends `Authorization: Bearer …` in gateway mode and `X-Plex-Token` otherwise. iOS + macOS + tvOS build with 0 errors. |
+| **A2** — `selectGateway(token:accountID:displayName:)` | **done** — sets `baseURLServer`, `authTokenServer`, a synthetic `PlexCloudResource(name: displayName, clientIdentifier: accountID…)`, `connectionKind = .custom` and `speaksToGateway`, and bumps the generation. No plex.tv, no discovery. |
+| **A3** — the WeFlix sign-in creates the Plex access | **not started.** `SessionManager.adoptWeFlixAccount(user:token:)`: build `MediaAccount.plex(PlexAccount(id: "weflix:<user.id>", displayName: user.displayName))`, activate its profile, and reach `.ready` — never `UserRepository.getUser()`/`getHomeUsers()`. |
+| **A4** — the gate shows the real UI | **not started.** `WeFlixAppGate` should hand over to `MainTabView`/`MainView` once the account is adopted, and the placeholder (`WeFlixSignedInView`) goes or becomes the launching state. |
+| **A5** — gateway mode never calls plex.tv | **not started.** Guard `ResourceRepository`/`AuthRepository`/`UserRepository`/`DownloadQueueRepository` so no live path reaches them, with a sweep test. |
+
+**Ruling recorded:** this session stopped after A2 rather than opening A3, because A3+A4 rewire `SessionManager`
+and the root view and need a full three-platform build and a simulator pass — work that deserves a fresh context,
+and which leaves the app **exactly as shippable as it is today** (still the placeholder) if it is interrupted. The
+plan's own gate is unchanged: A1–A5 together are what makes the home show movies.
+
+**A2's interface note for whoever continues:** `PlexAPIContext` is created in several places, so the gateway state
+must be established on the context whose `serverAccessSnapshot()` is handed to the session — `selectGateway()` is
+called once, at sign-in, and the flag travels *inside* the snapshot from there. A3 is where that call goes.
+
 
 Luther, 2026-10-24: *"weflix custom plex is only a skin ui. the real backend is still plex. so basically we strimr
 is stil talking to plex. only via weflix.me"* — the client keeps its Plex plumbing, and `weflix.me` becomes the

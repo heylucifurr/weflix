@@ -32,6 +32,19 @@ enum WeFlixServer {
     /// `POST` — ends this device's token.
     static let logoutPath = "api/app/auth/logout"
 
+    /// The **gateway**: the Plex-shaped reads the app makes of this server, which holds the Plex token and does the
+    /// reading on the account's behalf (PHASE APP-GATEWAY). One path, because the app talks to one host.
+    static let gatewayPath = "api/plex"
+
+    /// What the gateway calls itself when the app asks who it is talking to (`/api/plex/identity`). A literal, never
+    /// the real Plex server's identifier — `lib/plex-gateway.ts` on the server answers with the same one.
+    static let gatewayMachineIdentifier = "weflix-gateway"
+
+    /// The whole gateway base URL — `https://weflix.me/api/plex`, which the Plex client treats as its server.
+    static var gatewayBaseURL: URL {
+        baseURL.appendingPathComponent(gatewayPath)
+    }
+
     /// What this device calls itself, and which platform it is, so the owner can tell his devices apart.
     ///
     /// Neither value is a secret and neither is trusted by the server: they are stored beside the device row

@@ -15,6 +15,11 @@ final class PlexAPIContext {
         let authToken: String
         let clientIdentifier: String
         let generation: Int
+        /// PHASE APP-GATEWAY — true when this server is the **WeFlix gateway**, so the client sends its credential as
+        /// `Authorization: Bearer` instead of Plex's `X-Plex-Token` (`PlexServerNetworkClient`). It travels in the
+        /// snapshot because the snapshot is the only thing the network client is given: one flag here decides the
+        /// header for every request, and no caller has to remember which kind of server it is talking to.
+        var speaksToGateway = false
     }
 
     private enum ConnectionStatus: Sendable {
@@ -43,6 +48,8 @@ final class PlexAPIContext {
     private(set) var baseURLServer: URL?
     private(set) var authTokenServer: String?
     private(set) var connectionKind: PlexConnectionKind?
+    /// PHASE APP-GATEWAY — set by `selectGateway()`: this context talks to the WeFlix server, not to a Plex server.
+    private(set) var speaksToGateway = false
     private(set) var serverAccessGeneration = 0
     @ObservationIgnored private var bootstrapTask: Task<Void, Never>?
     @ObservationIgnored private var recoveryTask: Task<Void, Error>?
@@ -114,6 +121,37 @@ final class PlexAPIContext {
         recoveryHandler = handler
     }
 
+    /// Adopt the **WeFlix gateway** as this context's server (PHASE APP-GATEWAY, A2).
+    ///
+    /// The Apple client keeps speaking Plex — every repository, decoder and screen below this line is unchanged —
+    /// but the server it speaks to is `weflix.me`, which holds the Plex token and answers as a Plex-shaped gateway.
+    /// So the state built here is exactly the state a Plex sign-in produced:
+    ///
+    /// | Field | Value | Why |
+    /// |---|---|---|
+    /// | `baseURLServer` | `https://weflix.me/api/plex` | the one host, one path (`WeFlixServer`) |
+    /// | `authTokenServer` | the **WeFlix** device token | the gateway's credential, not a Plex token |
+    /// | `resource` | a synthetic `PlexCloudResource` | the app's account/profile model wants a server identity; this one is `WeFlix`'s and carries no connection list, because there is nothing to discover |
+    /// | `speaksToGateway` | `true` | so `PlexServerNetworkClient` sends `Authorization: Bearer …` |
+    ///
+    /// **Nothing here asks plex.tv**, and nothing probes a connection: there is one server, named in one file, and
+    /// `serverAccessSnapshot()` below is the only thing downstream code is given.
+    func selectGateway(token: String, accountID: String, displayName: String) {
+        let identifier = accountID.isEmpty ? WeFlixServer.gatewayMachineIdentifier : accountID
+
+        resource = PlexCloudResource(
+            name: displayName.isEmpty ? "WeFlix" : displayName,
+            clientIdentifier: identifier,
+            accessToken: nil,
+            connections: nil,
+        )
+        authTokenServer = token
+        baseURLServer = WeFlixServer.gatewayBaseURL
+        speaksToGateway = true
+        connectionKind = .custom
+        serverAccessGeneration &+= 1
+    }
+
     func serverAccessSnapshot() throws -> ServerAccessSnapshot {
         guard let resource, let baseURLServer else {
             throw PlexAPIError.missingConnection
@@ -127,6 +165,7 @@ final class PlexAPIContext {
             authToken: authTokenServer,
             clientIdentifier: clientIdentifier,
             generation: serverAccessGeneration,
+            speaksToGateway: speaksToGateway,
         )
     }
 

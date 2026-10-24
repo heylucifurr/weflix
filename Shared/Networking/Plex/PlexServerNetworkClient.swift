@@ -252,7 +252,14 @@ final class PlexServerNetworkClient {
         if let appVersion {
             request.setValue(appVersion, forHTTPHeaderField: "X-Plex-Version")
         }
-        request.setValue(snapshot.authToken, forHTTPHeaderField: "X-Plex-Token")
+        if snapshot.speaksToGateway {
+            // PHASE APP-GATEWAY — the WeFlix gateway takes the app's own device token, as a bearer credential. Plex's
+            // own `X-Plex-Token` is never sent: the gateway holds the Plex token server-side and refuses one from a
+            // client (`lib/plex-proxy.ts`'s `hasPlexTokenQuery`, and the route adds it itself).
+            request.setValue("Bearer \(snapshot.authToken)", forHTTPHeaderField: "Authorization")
+        } else {
+            request.setValue(snapshot.authToken, forHTTPHeaderField: "X-Plex-Token")
+        }
         request.setValue(language, forHTTPHeaderField: "X-Plex-Language")
         request.setValue(snapshot.clientIdentifier, forHTTPHeaderField: "X-Plex-Client-Identifier")
         for (key, value) in headers {
