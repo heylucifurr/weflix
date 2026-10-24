@@ -10,6 +10,19 @@ final class MediaRepository {
 
     func mediaURL(path: String) -> URL? {
         guard let snapshot = try? context?.serverAccessSnapshot() else { return nil }
+
+        // PHASE APP-GATEWAY — a direct play goes through WeFlix's `/api/video`, and the credential is the **stream
+        // ticket** rather than the device token: the player fetches this URL itself and cannot send a header
+        // (`WeFlixGatewayURL.directPlayURL`). The path and its own query are what the Plex server would have been
+        // asked for, so nothing about the request changes except who answers it.
+        if snapshot.speaksToGateway {
+            return WeFlixGatewayURL.directPlayURL(
+                path: path,
+                ratingKey: nil,
+                ticket: WeFlixStreamTicketCache.shared.current(),
+            )
+        }
+
         return Self.mediaURL(path: path, baseURL: snapshot.baseURL, token: snapshot.authToken)
     }
 

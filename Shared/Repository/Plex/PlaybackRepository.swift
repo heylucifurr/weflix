@@ -149,11 +149,35 @@ final class PlaybackRepository {
                   resolvingAgainstBaseURL: false,
               )
         else { throw PlexAPIError.invalidURL }
+
+        // PHASE APP-GATEWAY — the stream goes through WeFlix's `/api/transcode`, which proxies the playlist **and
+        // rewrites it** so its segment URLs carry no credential. The credential here is the **stream ticket**: the
+        // player fetches this URL itself and cannot send a header.
+        if snapshot.speaksToGateway {
+            guard let url = WeFlixGatewayURL.transcodeURL(
+                plexPath: "/video/:/transcode/universal/start.m3u8",
+                plexQuery: Self.encodedQuery(query),
+                ticket: WeFlixStreamTicketCache.shared.current(),
+            )
+            else { throw PlexAPIError.invalidURL }
+
+            return url
+        }
+
         components.queryItems = query + [
             URLQueryItem(name: "X-Plex-Token", value: snapshot.authToken),
         ]
         guard let url = components.url else { throw PlexAPIError.invalidURL }
         return url
+    }
+
+    /// The transcode query as a string, for the gateway route — which takes the whole Plex path (with its query)
+    /// as one `path` parameter, so the query has to be encoded exactly as it would have travelled to Plex.
+    private static func encodedQuery(_ items: [URLQueryItem]) -> String {
+        var components = URLComponents()
+        components.queryItems = items
+
+        return components.percentEncodedQuery ?? ""
     }
 
     func pingTranscode(sessionIdentifier: String) async throws {

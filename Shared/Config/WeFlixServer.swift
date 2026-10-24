@@ -20,8 +20,26 @@ import Foundation
 /// that quietly talks to a different server than the one it was built for is worse than one that says it cannot
 /// reach it.
 enum WeFlixServer {
+    /// The address the app ships with.
+    private static let productionURL = URL(string: "https://weflix.me")!
+
     /// The WeFlix server this app is built against. **The only host the app ever contacts.**
-    static let baseURL = URL(string: "https://weflix.me")!
+    ///
+    /// `WEFLIX_BASE_URL` in the environment moves the whole app — the sign-in routes, the gateway and every media
+    /// URL, because they are all derived from this one value. It exists so a build can be pointed at
+    /// `https://beta.weflix.me` **before production has been updated** (Luther: beta is redeployed on every push to
+    /// `Development`, production on a merge to `main`), which is how the gateway is proved end-to-end. It is an
+    /// **https-only** override with no other effect: it is not a fallback between servers, and an unset variable is
+    /// the shipped production address (`docs/PROJECT.md`).
+    static var baseURL: URL {
+        guard let override = ProcessInfo.processInfo.environment["WEFLIX_BASE_URL"],
+              let url = URL(string: override),
+              url.scheme == "https",
+              url.host()?.isEmpty == false
+        else { return productionURL }
+
+        return url
+    }
 
     /// `POST` — a WeFlix account signs this device in. Answers a bearer token, once.
     static let loginPath = "api/app/auth/login"
@@ -31,6 +49,9 @@ enum WeFlixServer {
 
     /// `POST` — ends this device's token.
     static let logoutPath = "api/app/auth/logout"
+
+    /// `POST` — a short-lived ticket for the **player**'s media URLs, which cannot carry a header (S5).
+    static let streamTicketPath = "api/app/stream-ticket"
 
     /// The **gateway**: the Plex-shaped reads the app makes of this server, which holds the Plex token and does the
     /// reading on the account's behalf (PHASE APP-GATEWAY). One path, because the app talks to one host.

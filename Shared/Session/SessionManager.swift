@@ -380,6 +380,73 @@ final class SessionManager {
         return account
     }
 
+    // MARK: - WeFlix account (PHASE APP-GATEWAY)
+
+    /// Adopts the WeFlix account this device is signed in as, and **activates it** — the step that turns "signed in"
+    /// into "you can see your films" (A3).
+    ///
+    /// The app is signed in to WeFlix with a **device token**, and everything the app shows afterwards works off its
+    /// own account/profile model. This is the bridge between the two: it records the WeFlix account as
+    /// `MediaAccount.plex`, marked with `weflix:` (`WeFlixGatewayAccount`), links it to the active profile or a new
+    /// local one, and activates that profile — which is what `ServerRegistry` then connects, through
+    /// `selectGateway()` and not through plex.tv.
+    ///
+    /// Idempotent on purpose: it is called at launch and after every sign-in, and both find the account and the link
+    /// already there. Nothing on this path talks to plex.tv.
+    @discardableResult
+    func adoptWeFlixAccount(user: WeFlixUser, token: String) async -> WeFlixProfile? {
+        let account = WeFlixGatewayAccount.account(for: user)
+
+        do {
+            try accountStore.save(account, token: token)
+        } catch {
+            ErrorReporter.capture(error)
+
+            return nil
+        }
+
+        // The link's user id is the same marker, so a gateway link is recognisable without a second field, and the
+        // Home token below is the device token itself: one credential, stored in the one place tokens live.
+        let userUUID = WeFlixGatewayAccount.plexAccountID(for: user.id)
+        accountStore.setHomeToken(token, accountID: account.id, userUUID: userUUID)
+        let targetProfileID: String = if let activeProfile {
+            activeProfile.id
+        } else if let existing = profiles.first {
+            existing.id
+        } else {
+            profileStore.createLocalProfile(name: account.displayName).id
+        }
+        profileStore.addLink(ProfileLink(
+            profileID: targetProfileID,
+            accountID: account.id,
+            user: .plexHome(uuid: userUUID),
+        ))
+
+        guard let profile = profileStore.profile(id: targetProfileID, accounts: accountStore.accounts) else {
+            return nil
+        }
+
+        // `activate` is the app's own path to a visible library: it hydrates the registry, waits for one server to be
+        // ready, and only then says `.ready`. A gateway account goes through it exactly like a Plex one.
+        await activate(profile)
+
+        return profile
+    }
+
+    /// Signing out of WeFlix forgets the account, its link and its token, so a later sign-in starts clean.
+    func forgetWeFlixAccount() {
+        for account in accountStore.accounts where account.plexAccount.map(WeFlixGatewayAccount.isGateway) == true {
+            if let profile = activeProfile {
+                profileStore.removeLink(profileID: profile.id, accountID: account.id)
+            }
+            try? accountStore.remove(accountID: account.id)
+        }
+        WeFlixStreamTicketCache.shared.clear()
+        registry.deactivate()
+        activeProfile = nil
+        status = accountStore.accounts.isEmpty ? .needsAccount : .needsProfileSelection
+    }
+
     // MARK: - Links
 
     func addLink(_ link: ProfileLink) {

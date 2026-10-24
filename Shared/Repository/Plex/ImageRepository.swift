@@ -17,6 +17,15 @@ final class ImageRepository {
         format: String? = nil,
     ) -> URL? {
         guard let snapshot = try? context?.serverAccessSnapshot() else { return nil }
+
+        // PHASE APP-GATEWAY — artwork goes through WeFlix's own image route, with **no credential in the URL**:
+        // `CachedArtworkService` loads it with `URLSession`, so the app's bearer token travels in a header
+        // (`WeFlixGatewayURL.imageURL`, and `CachedArtworkService`'s request). The Plex path is what the route
+        // accepts, and it applies the per-account library rule to it.
+        if snapshot.speaksToGateway {
+            return WeFlixGatewayURL.imageURL(path: path, width: width, height: height, format: format)
+        }
+
         var components = URLComponents(
             url: snapshot.baseURL.appendingPathComponent("photo/:/transcode"),
             resolvingAgainstBaseURL: false,

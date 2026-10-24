@@ -351,6 +351,15 @@ final class ServerRegistry {
     }
 
     private func resolvePlex(link: ProfileLink, account: PlexAccount, userUUID: String) async {
+        // PHASE APP-GATEWAY — a WeFlix account has **no plex.tv step**: there is one server, named in one file, and
+        // no resources to discover. Branching here (rather than after the fetch) is what keeps a gateway sign-in off
+        // plex.tv: nothing below this line runs for it.
+        if WeFlixGatewayAccount.isGateway(account) {
+            resolveGateway(link: link, account: account, userUUID: userUUID)
+
+            return
+        }
+
         let cached = accountStore.cachedResources(userUUID: userUUID)
         if let cached {
             addPlexServers(cached, link: link, userUUID: userUUID, replacing: false)
@@ -508,10 +517,21 @@ final class ServerRegistry {
     }
 
     private func connectPlex(_ server: ServerIdentity) async {
-        guard let entry = entries[server], let resource = entry.plexResource,
+        guard let entry = entries[server],
               case let .plexHome(userUUID) = entry.link.user,
               case let .plex(account)? = accountStore.account(id: entry.link.accountID)
         else { return }
+
+        // PHASE APP-GATEWAY A3 — a WeFlix account connects to `weflix.me`, with the device token it already stores,
+        // and nothing here asks plex.tv for a token or a resource. It is recognised by the `weflix:` marker on the
+        // account id, the same one `resolvePlex()` branched on, so the two plex.tv-only steps cannot disagree.
+        if WeFlixGatewayAccount.isGateway(account) {
+            await connectGateway(server, entry: entry, userUUID: userUUID)
+
+            return
+        }
+
+        guard let resource = entry.plexResource else { return }
         let context = PlexAPIContext()
         await context.waitForBootstrap()
         do {
@@ -555,6 +575,83 @@ final class ServerRegistry {
                 markUnreachable(server)
             }
         }
+    }
+
+    /// The one server of a WeFlix account (PHASE APP-GATEWAY A3): `weflix.me`, under the account's own link.
+    ///
+    /// It carries **no `plexResource`** on purpose — there is no connection list to discover and no plex.tv resource
+    /// to name — so `connectPlex()` recognises it by the same `weflix:` marker and connects it through
+    /// `selectGateway()` instead of `/switch` + `selectServer()`.
+    private func resolveGateway(link: ProfileLink, account: PlexAccount, userUUID: String) {
+        let server = ServerIdentity(provider: .plex, id: WeFlixServer.gatewayMachineIdentifier)
+        guard entries[server] == nil, !Task.isCancelled else { return }
+        add(Entry(
+            session: ServerSession(
+                identity: server,
+                name: account.displayName,
+                accountID: link.accountID,
+                services: nil,
+                isEnabled: isEnabled(server, link: link),
+                status: .connecting,
+            ),
+            link: link,
+            userID: userUUID,
+        ))
+        connect(server)
+    }
+
+    /// The connection of a WeFlix account (A3): the state a Plex sign-in produces, built from one host.
+    ///
+    /// **No plex.tv call sits on this path** — no `/home/users/{uuid}/switch`, no resource fetch, no token exchange.
+    /// The credential is the app's own stored device token (`AccountStore`, which is where `adoptWeFlixAccount()`
+    /// put it), and `selectGateway()` builds the gateway's base URL, its synthetic resource and `speaksToGateway`.
+    /// Everything downstream — repositories, the player, the artwork loader — then works exactly as it does for a
+    /// Plex server, which is the point of routing a WeFlix sign-in through the app's own Plex-shaped model.
+    private func connectGateway(_ server: ServerIdentity, entry: Entry, userUUID: String) async {
+        let token: String
+        do {
+            guard let stored = try accountStore.token(forAccountID: entry.link.accountID) else {
+                linkStatuses[entry.link.accountID] = .needsReauthentication
+                markNeedsReauthentication(server)
+
+                return
+            }
+            token = stored
+        } catch {
+            ErrorReporter.capture(error)
+            markUnreachable(server)
+
+            return
+        }
+
+        let context = PlexAPIContext()
+        await context.waitForBootstrap()
+        context.setAuthToken(token)
+        // The watchlist is a Plex.tv idea; the gateway has none, so no watchlist token is fetched and no plex.tv
+        // request is made for one.
+        context.watchlistAuthToken = nil
+        // A refusal here means the WeFlix token is gone, and the server's own sentence is what the app shows.
+        context.configureServerAccessRecovery { [weak self] _ in
+            self?.linkStatuses[entry.link.accountID] = .needsReauthentication
+            self?.markNeedsReauthentication(server)
+            throw PlexServerAccessRecoveryError.accountUnauthorized
+        }
+        context.selectGateway(
+            token: token,
+            accountID: server.id,
+            displayName: entry.session.name,
+        )
+        guard !Task.isCancelled, entries[server]?.session.isEnabled == true else { return }
+        let services = PlexMediaServicesFactory.make(
+            context: context,
+            serverName: entry.session.name,
+            userID: userUUID,
+            favoritesProfileID: entry.link.profileID,
+            favoritesStore: favoritesStore,
+            trackSelectionCoordinator: trackSelectionCoordinator,
+            versionSelectionStore: versionSelectionStore,
+        )
+        markReady(server, services: services) { $0.plexContext = context }
     }
 
     private func connectJellyfin(_ server: ServerIdentity) async {

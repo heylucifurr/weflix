@@ -131,6 +131,23 @@ struct WeFlixAuthClient {
         )
     }
 
+    /// `POST /api/app/stream-ticket` — the credential the **player**'s URLs carry (PHASE APP-GATEWAY S5).
+    ///
+    /// `AVPlayer` fetches artwork, direct plays and HLS streams itself, and those requests cannot carry an
+    /// `Authorization` header, so the app asks for a signed, minutes-long ticket instead of putting its device token
+    /// in a URL. Only the three streaming routes accept one.
+    func streamTicket(token: String) async throws -> (ticket: String, expiresAt: Date) {
+        let answer: StreamTicketAnswer = try await send(
+            WeFlixServer.streamTicketPath,
+            method: "POST",
+            token: token,
+            body: nil,
+            unauthorized: .tokenIsOver,
+        )
+
+        return (answer.ticket, Date(timeIntervalSince1970: answer.expiresAt / 1000))
+    }
+
     /* ---------------------------------------------------------------------- */
     /* the one place a request is made                                          */
     /* ---------------------------------------------------------------------- */
@@ -148,6 +165,12 @@ struct WeFlixAuthClient {
 
     private struct LogoutAnswer: Decodable {
         let message: String?
+    }
+
+    /// `POST /api/app/stream-ticket`'s answer: the ticket and the epoch **milliseconds** it expires at.
+    private struct StreamTicketAnswer: Decodable {
+        let ticket: String
+        let expiresAt: Double
     }
 
     /// The server's refusal body: `{ ok: false, message: "…" }`.

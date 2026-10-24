@@ -134,10 +134,24 @@ final class CachedArtworkService: MediaArtworkService {
     }
 
     private static func download(_ url: URL) async throws -> Data {
-        let (data, response) = try await URLSession.shared.data(from: url)
+        // PHASE APP-GATEWAY — artwork loaded from WeFlix carries the app's **bearer token in a header**, which is
+        // exactly why the gateway's image URL holds no credential of its own (`WeFlixGatewayURL.imageURL`). A
+        // `URLSession` request can do what an `AVPlayer` request cannot, so the long-lived token never appears in a
+        // URL — and a Plex-server URL, which has no header to send, keeps its own `X-Plex-Token` query instead.
+        var request = URLRequest(url: url)
+
+        if url.host() == WeFlixServer.baseURL.host(),
+           let token = WeFlixDeviceTokenStore().token()
+        {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
         if let status = (response as? HTTPURLResponse)?.statusCode, !(200 ..< 300).contains(status) {
             throw PlexAPIError.requestFailed(statusCode: status)
         }
+
         return data
     }
 
