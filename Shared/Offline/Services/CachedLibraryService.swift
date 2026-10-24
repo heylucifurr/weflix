@@ -78,7 +78,7 @@ class CachedLibraryService: MediaLibraryService {
             for (index, artwork) in artworks.enumerated() {
                 guard case let .url(url) = artwork else { continue }
                 group.addTask {
-                    try await (index, URLSession.shared.data(from: url).0)
+                    try await (index, URLSession.shared.data(for: WeFlixGatewayURL.artworkRequest(for: url)).0)
                 }
             }
             var resolved = artworks

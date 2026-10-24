@@ -7,7 +7,7 @@ nonisolated enum ImageCornerColorSampler {
         case let .data(data):
             return await colors(from: data)
         case let .url(url):
-            let (data, _) = try await URLSession.shared.data(from: url)
+            let (data, _) = try await URLSession.shared.data(for: WeFlixGatewayURL.artworkRequest(for: url))
             return await colors(from: data)
         }
     }

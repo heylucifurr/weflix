@@ -584,7 +584,7 @@ final class DownloadManager: NSObject, URLSessionDownloadDelegate {
             case let .data(value):
                 value
             case let .url(url):
-                try await URLSession.shared.data(from: url).0
+                try await URLSession.shared.data(for: WeFlixGatewayURL.artworkRequest(for: url)).0
             }
             guard !data.isEmpty else { return nil }
             let fileName = "poster.jpg"

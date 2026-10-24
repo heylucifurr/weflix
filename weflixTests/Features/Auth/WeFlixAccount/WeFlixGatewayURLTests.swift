@@ -273,6 +273,37 @@ final class WeFlixGatewayURLTests: XCTestCase {
         )
     }
 
+    func testTheArtworkRequestCarriesTheTokenOnlyForWeFlix() {
+        let ours = WeFlixServer.baseURL.appendingPathComponent("api/image")
+        let someoneElse = URL(string: "https://plex.example.com/photo/:/transcode?X-Plex-Token=t")!
+
+        XCTAssertEqual(
+            WeFlixGatewayURL.artworkRequest(for: ours, token: "app-token").value(forHTTPHeaderField: "Authorization"),
+            "Bearer app-token",
+            "the app's own image route needs the credential — and a URL cannot carry the device token",
+        )
+        XCTAssertNil(
+            WeFlixGatewayURL.artworkRequest(for: someoneElse, token: "app-token").value(forHTTPHeaderField: "Authorization"),
+            "another host's artwork URL keeps its own query token and gets no WeFlix credential",
+        )
+        XCTAssertNil(WeFlixGatewayURL.artworkRequest(for: ours, token: nil).value(forHTTPHeaderField: "Authorization"))
+        XCTAssertNil(WeFlixGatewayURL.artworkRequest(for: ours, token: "").value(forHTTPHeaderField: "Authorization"))
+    }
+
+    func testTheGatewayResourceIdentifierIsTheIdentityTheItemsCarry() {
+        // The bug this pins (2026-10-24): the registry keyed the server as one identity while the media items named
+        // another, so every card looked up an artwork service for a server that did not exist and the whole home
+        // rendered without posters.
+        let context = PlexAPIContext()
+        context.selectGateway(token: "a-token", accountID: "weflix-gateway.weflix:2", displayName: "Lucifurr")
+
+        XCTAssertEqual(
+            try? context.serverAccessSnapshot().serverIdentifier,
+            "weflix-gateway.weflix:2",
+            "the resource identifier and the registry's server identity are the same string",
+        )
+    }
+
     // MARK: - The host (this build's own rule)
 
     func testTheAppTalksToWeFlixAndOnlyWeFlix() {

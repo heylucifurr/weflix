@@ -43,17 +43,24 @@ struct WeFlixAppGate<Ready: View>: View {
     }
 
     var body: some View {
-        content
+        // The `ZStack` is load-bearing: `content` switches between three view *types* (a spinner, the sign-in form,
+        // the signed-in states), and a `.task` attached directly to a view whose type changes is torn down and
+        // started again — which reset `@State` (so `session` went back to `.checking`) and re-ran `start()` forever.
+        // That is the loop that starved every other request (2026-10-24). One stable container, and the modifiers
+        // below belong to something whose identity does not move.
+        ZStack { content }
             .task {
-                // Once per launch. A re-render must not re-ask the server who we are.
+                // Once per launch, and again after a "try again" tap.
                 if case .checking = session.status {
                     await session.start()
                 }
             }
-            // Adopting is idempotent (the account and the link are found already there), so this is safe to key on
-            // the status: a sign-in adopts, and a relaunch adopts again for the token it already had.
-            .task(id: session.status) {
-                await adopt()
+            // Adoption follows the sign-in state, and `.onChange` is not scoped to the view's identity, so a
+            // status change is exactly one adoption — never a restart of `start()`.
+            .onChange(of: session.status, initial: true) { _, status in
+                guard case .signedIn = status else { return }
+
+                Task { await adopt() }
             }
             // A WeFlix sign-in that the server no longer accepts comes back to the sign-in screen with a sentence
             // instead of leaving the person on a home screen that says the server did not respond.
@@ -118,7 +125,7 @@ struct WeFlixAppGate<Ready: View>: View {
               let token = WeFlixDeviceTokenStore().token()
         else { return }
 
-        await sessionManager.adoptWeFlixAccount(user: user, token: token)
+        let adopted = await sessionManager.adoptWeFlixAccount(user: user, token: token)
         await WeFlixStreamTicketCache.shared.refreshIfNeeded(deviceToken: token)
     }
 }

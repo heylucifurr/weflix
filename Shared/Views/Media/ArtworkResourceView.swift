@@ -181,7 +181,8 @@ private struct RemoteArtworkImage: View {
         if let cached = cache.object(forKey: url as NSURL) {
             return cached
         }
-        let (data, response) = try await URLSession.shared.data(from: url)
+        let request = WeFlixGatewayURL.artworkRequest(for: url)
+        let (data, response) = try await URLSession.shared.data(for: request)
         if let status = (response as? HTTPURLResponse)?.statusCode, !(200 ..< 300).contains(status) {
             throw URLError(.badServerResponse)
         }

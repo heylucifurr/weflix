@@ -640,9 +640,12 @@ final class ServerRegistry {
         }
         context.selectGateway(
             token: token,
-            // The **machine identifier**, not `server.id`: the identity is the app's own key for this account's
-            // server (one per account), while this is the identifier the gateway answers in `/identity`.
-            accountID: WeFlixServer.gatewayMachineIdentifier,
+            // **`server.id`, not `WeFlixServer.gatewayMachineIdentifier`.** This string becomes the context's
+            // `serverIdentifier`, which every media item the app builds carries as *its* server — and a card looks its
+            // artwork service up by that identity. Giving the resource the plain machine identifier meant the items
+            // named a server the registry had no entry for, so no card could find its artwork service and the whole
+            // home rendered without posters (2026-10-24). One account, one identity, in both places.
+            accountID: server.id,
             displayName: entry.session.name,
         )
         guard !Task.isCancelled, entries[server]?.session.isEnabled == true else { return }

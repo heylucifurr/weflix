@@ -97,6 +97,25 @@ enum WeFlixGatewayURL {
         return width >= 800 ? "backdrop" : "thumb"
     }
 
+    /// A request for an image the app loads itself, with the WeFlix bearer token when the URL is WeFlix's.
+    ///
+    /// **One place**, because four different loaders fetch artwork (`ArtworkResourceView` for a `.url` resource,
+    /// `CachedArtworkService`, `CachedLibraryService`'s previews, `ImageCornerColorSampler`, `DownloadManager`), and
+    /// the gateway's image route needs a credential. The app's own token travels in a **header** here — a
+    /// `URLSession` request can send one, which is why the image URL carries no token at all — and any other host (a
+    /// Plex server's own artwork URL, which has its token in the query) is left exactly as it was.
+    ///
+    /// `token` is a parameter so the rule can be tested without a Keychain.
+    static func artworkRequest(for url: URL, token: String? = WeFlixDeviceTokenStore().token()) -> URLRequest {
+        var request = URLRequest(url: url)
+
+        if url.host() == WeFlixServer.baseURL.host(), let token, !token.isEmpty {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+
+        return request
+    }
+
     /* ---------------------------------------------------------------------- */
 
     private static func url(path: String, items: [URLQueryItem]) -> URL? {
