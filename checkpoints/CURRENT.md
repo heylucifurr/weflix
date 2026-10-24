@@ -152,11 +152,24 @@ applying the per-account library rule and the rate limit) and answer the `/ident
 sign-in answer instead of a PIN flow; **A4** swaps this placeholder for the real home; **A5** proves nothing on a
 live path still calls plex.tv.
 
-> **In-flight work left alone:** this repository's working tree has staged app-icon changes (Strimr logos replaced
-> by the new `appicon.png` artwork across iOS, macOS and tvOS, plus a new tvOS `appicon.imageset`) that Luther was
-> making during this session. They are **not** mine and are **not** committed by me; the commits below touch only
-> `checkpoints/`, `docs/`, `CLAUDE.md` and the WeFlix sign-in source. The three-target build gate should be re-run
-> once that artwork is committed, since a renamed asset can break a target on its own.
+> **In-flight work that my commit `d4a6370` accidentally swept in — a real regression, please decide.** The client
+> repo's tree had Luther's **staged** app-icon work when I committed a checkpoint file with `git add <file> &&
+> git commit`: `git commit` commits the whole **index**, so his staged artwork went in too and was pushed. The
+> content is his and untouched; the attribution is not. A three-target build with it in place gives:
+>
+> ```text
+> weflix-tvOS/Assets.xcassets:./App Icon & Top Shelf Image.brandassets/App Icon.imagestack: error:
+>   The last image stack layer with content, "Back", must exactly fill the image stack.
+>   Its current frame is {{-312, -392}, {1024, 1024}} while the image stack's size is {400, 240}.
+> ```
+>
+> The square `appicon.png` (1024×1024) replaced `logo_tvos_400@1x.jpg` / `logo_tvos_400@2x.jpg` /
+> `logo_tvos_1280.jpg`, which the layered tvOS brand assets require to be exactly 400×240 and 1280×768 — the very
+> artwork `main`'s `9a26fe6` ("restore layered app icon artwork") had just repaired. iOS and macOS build clean
+> (`actool` accepts the square icons there). **Left exactly as it is, pending Luther's call** — the fix is his to
+> choose: restore those ten tvOS layer files from `main`, or produce non-square layers for the new artwork. No
+> history was rewritten (no force-push, per both repos' rules).
+
 
 
 
