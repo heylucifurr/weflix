@@ -137,9 +137,26 @@ answer, and an `app_devices` row for the owner exists on the beta that **I did n
 7. **The tests only run on the macOS scheme.** The `weflix` (iOS) scheme's `TestAction` lists no testables, so
    there is no one-command iOS test run. Add the same `TestableReference` to it?
 
-## Next step
+## Next step — PHASE APP-GATEWAY (planned, awaiting Luther's approval)
 
-Loading the home and the libraries **from the WeFlix server**, which needs server endpoints that do not exist
-yet. See `docs/PROJECT.md` §6.
+Luther, 2026-10-24: *"weflix custom plex is only a skin ui. the real backend is still plex. so basically we strimr
+is stil talking to plex. only via weflix.me"* — the client keeps its Plex plumbing, and `weflix.me` becomes the
+Plex-shaped gateway in front of the real server. The plan is written and lives in the **server** repository:
+`plex-custom-frontend/phases/active/PHASE-APP-GATEWAY.md` (audit, server tasks S1–S4, client tasks A1–A5, the gate,
+and four open questions for Luther). **Nothing in it is implemented yet.**
+
+In one line: **S1** teaches the request identity to accept the app's bearer token; **S2–S4** widen `/api/plex` from
+the two calls a browser player needs into the set the app makes (still refusing a client-supplied token, still
+applying the per-account library rule and the rate limit) and answer the `/identity` call as WeFlix; **A1–A2** point
+`PlexAPIContext` at the gateway with a bearer header and no plex.tv; **A3** builds the Plex account from the WeFlix
+sign-in answer instead of a PIN flow; **A4** swaps this placeholder for the real home; **A5** proves nothing on a
+live path still calls plex.tv.
+
+> **In-flight work left alone:** this repository's working tree has staged app-icon changes (Strimr logos replaced
+> by the new `appicon.png` artwork across iOS, macOS and tvOS, plus a new tvOS `appicon.imageset`) that Luther was
+> making during this session. They are **not** mine and are **not** committed by me; the commits below touch only
+> `checkpoints/`, `docs/`, `CLAUDE.md` and the WeFlix sign-in source. The three-target build gate should be re-run
+> once that artwork is committed, since a renamed asset can break a target on its own.
+
 
 

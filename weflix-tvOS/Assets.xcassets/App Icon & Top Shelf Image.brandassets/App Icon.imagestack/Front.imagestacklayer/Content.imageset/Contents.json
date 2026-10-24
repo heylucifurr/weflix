@@ -1,12 +1,12 @@
 {
   "images" : [
     {
-      "filename" : "logo_tvos_400@1x.jpg",
+      "filename" : "appicon.png",
       "idiom" : "tv",
       "scale" : "1x"
     },
     {
-      "filename" : "logo_tvos_400@2x.jpg",
+      "filename" : "appicon 1.png",
       "idiom" : "tv",
       "scale" : "2x"
     }
