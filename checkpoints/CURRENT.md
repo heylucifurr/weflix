@@ -1,3 +1,66 @@
+## PHASE APP-GATEWAY — the reported bug: a second WeFlix user landed on the first user's profile (2026-10-24, Cline)
+
+**Luther, after the delivery:** *"I signed in as melvie. after that the homepage says Your server did not respond.
+I click profile icon i can see Lucifurr… when I check Settings accounts and server melvie. Profiles I can see
+lucifurr again. This is wrong. when user signs in it should be their account."* Fixed in `1560644`.
+
+### What was actually wrong — three defects, all in the adoption path
+
+Read from the app's own container on the simulator, not guessed:
+
+```text
+weflix.accounts.v1  [{"plex":{"_0":{"displayName":"Melvie Ramos","id":"weflix:8"}}}]        ← this one was right
+weflix.profiles.v1  [{"name":"Lucifurr","id":"local.0197d07c-…"}]                           ← the previous person
+                    links: [{"profileID":"local.0197d07c-…","accountID":"plex:weflix:8"}]   ← Melvie's account,
+                    activeProfileID: local.0197d07c-…                                          Lucifurr's profile
+```
+
+1. **One server identity for every WeFlix account.** `ServerIdentity` is the key `ServerRegistry` stores a
+   connected server under, and every WeFlix account used `weflix-gateway`. The second sign-in therefore found the
+   *first* sign-in's entry already present (`guard entries[server] == nil`), kept its link, and connected with **the
+   first account's token** — which the sign-out had just revoked. That is the "Your servers did not respond": a
+   revoked token reading a dead server. `WeFlixGatewayAccount.serverIdentity(for:)` is now one per account; the
+   identifier the client *reports* stays `weflix-gateway`, because that is what the gateway answers in `/identity`.
+2. **Adoption reused `activeProfile`.** A profile in this app is a person, and a WeFlix account is one person, so
+   the profile must be the one already **linked to that account**. The rule is now
+   `WeFlixGatewayAccount.profileChoice(accountID:displayName:profiles:links:)` — a pure function, so it is testable
+   without a store, a registry or a network — and an account with no profile of its own gets one named after the
+   person signing in.
+3. **Sign-out left the account, its token and its links behind**, which is what allowed (2) to hand a dead account
+   to the next person. `forgetWeFlixAccount()` now removes the account, its token, its links and any local profile it
+   leaves empty, and is wired to the gate's sign-out. Adoption additionally drops any *other* WeFlix account
+   (`discardOtherWeFlixAccounts`): the Keychain holds one device token, so only one WeFlix sign-in can be live — a
+   second WeFlix account is a server that can never answer.
+
+### The repair, verified live
+
+The exact broken state was planted on the simulator (a local profile named "Lucifurr", linked to the account and
+active), and the app was launched signing in as a different WeFlix user:
+
+```text
+before   profiles: [{"id":"local.stale-test","name":"Lucifurr"}]  active: local.stale-test
+after    profiles: [{"id":"local.stale-test","name":"sample user"}]  accounts: [weflix:10]  ← same id, new name
+         screen: Home · Libraries · Search, Continue Watching, Recently Added in Anime / in Movies
+```
+
+The profile keeps its id, so its settings survive — and a profile that a human built for several accounts, or a
+Plex Home profile, is **never** renamed (a test pins that).
+
+### Gate (measured, this Mac)
+
+macOS suite **exit 0** (no regressions from the `SessionManager`/`ServerRegistry` edits) · iOS signed build **0
+errors** · tvOS build **0 errors** · `WeFlixGatewayURLTests` **16/16** (5 new: a new account does not land on
+another person's profile, a second sign-in is a no-op, the stale name is repaired, a multi-link profile is not
+renamed, and two accounts have two identities).
+
+### Still open (needs Luther's answer, not more code)
+
+If the home *still* says "Your servers did not respond" after this fix, the reason is Melvie's **account**, not the
+wiring: a pending or disabled WeFlix account is refused by the gateway (`401`), and the app's home shows its generic
+wording instead of the server's own sentence. That message improvement is worth doing — with the evidence of which
+refusal it is.
+
+
 ## PHASE APP-GATEWAY — A1–A5: the sign-in becomes a library, proved on a simulator (2026-10-24, Cline)
 
 **Luther:** *"proceed everything. my expected delivery is when I sign in I can see movies and play it."* The
