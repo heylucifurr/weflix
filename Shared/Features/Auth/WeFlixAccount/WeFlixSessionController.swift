@@ -30,6 +30,12 @@ final class WeFlixSessionController {
     }
 
     private(set) var status: Status = .checking
+    /// What the server said about this account's requests — the `requests` block of `GET /api/app/me`.
+    ///
+    /// Carried here because the sign-in state is where it comes from: `start()` reads it at launch, and
+    /// `signIn()` reads it again straight after a password sign-in (the login answer does not carry it), so the
+    /// main screen knows whether it has anything to show without a second, separate round trip.
+    private(set) var requests: WeFlixRequests?
     /// The one field a person types into: an email address, or the display name the owner gave them.
     var identifier = ""
     var password = ""
@@ -64,17 +70,20 @@ final class WeFlixSessionController {
         defer { isWorking = false }
 
         do {
-            let user = try await client.me(token: token)
+            let answer = try await client.me(token: token)
 
             errorMessage = nil
-            status = .signedIn(user)
+            requests = answer.requests
+            status = .signedIn(answer.user)
         } catch WeFlixAuthError.unauthenticated {
             // Revoked, or unknown to this server. The app forgets it, so the next launch does not ask again.
             store.clear()
+            requests = nil
             status = .signedOut
         } catch let error as WeFlixAuthError {
             // The token may well still be good; the network is not. Keep it and say what happened.
             errorMessage = error.message
+            requests = nil
             status = .signedOut
         } catch {
             errorMessage = WeFlixAuthError.unreachable.message
@@ -107,10 +116,48 @@ final class WeFlixSessionController {
             // password left in a property is a password in a heap dump.
             self.password = ""
             status = .signedIn(answer.user)
+
+            // The login answer carries no `requests` block (it is the token that is new, not the account), so the
+            // app asks once more now that it holds the token. A failure here is not a failed sign-in — the person
+            // is signed in and the requests screen will say what it can — but it must not look like silence
+            // either, so the sentence travels to the screen that is about to appear.
+            await refreshRequests(token: answer.token)
         } catch let error as WeFlixAuthError {
             errorMessage = error.message
         } catch {
             errorMessage = WeFlixAuthError.unreachable.message
+        }
+    }
+
+    /// Who is signed in — the display name the requests store keeps with the account's Overseerr id, and `""`
+    /// when nobody is.
+    var displayName: String {
+        if case let .signedIn(user) = status {
+            return user.displayName
+        }
+
+        return ""
+    }
+
+    /// Ask the server, once, what this account's requests are — after a sign-in and after a "try again".
+    ///
+    /// `requests = nil` on a refusal, which the requests screen reads as "not set up for your account" rather
+    /// than as a lie about what is allowed. A `401` here cannot happen (the token was just issued), and a
+    /// network failure is reported in `errorMessage` without disturbing the sign-in.
+    func refreshRequests(token: String? = nil) async {
+        let credential = token ?? store.token()
+
+        guard let credential else {
+            requests = nil
+
+            return
+        }
+
+        do {
+            requests = try await client.me(token: credential).requests
+        } catch {
+            requests = nil
+            errorMessage = (error as? WeFlixAuthError)?.message ?? WeFlixAuthError.unreachable.message
         }
     }
 
@@ -146,6 +193,7 @@ final class WeFlixSessionController {
     /// which is true whether the app had noticed it yet or not.
     func reportSignInEnded() {
         store.clear()
+        requests = nil
         errorMessage = "Your WeFlix sign-in has ended. Sign in again."
         status = .signedOut
     }
@@ -162,6 +210,7 @@ final class WeFlixSessionController {
         }
 
         store.clear()
+        requests = nil
         identifier = ""
         password = ""
         errorMessage = nil

@@ -36,8 +36,9 @@ struct WeFlixLiveAuthTests {
      *
      * It exists because the two deployments are not always at the same commit: production (`weflix.me`) is
      * deployed from `main`, so a route that only exists on `Development` answers **404** there until Luther
-     * merges. Testing the client against `https://beta.weflix.me` while that is true proves the client;
-     * pretending production answered would not.
+     * merges. Testing the client against the **pre-production deployment** (whose own address is deliberately not
+     * written down in this repository) while that is true proves the client; pretending production answered would
+     * not.
      */
     private static var baseURL: URL {
         let configured = ProcessInfo.processInfo.environment["WEFLIX_TEST_BASE_URL"] ?? ""
@@ -115,9 +116,12 @@ struct WeFlixLiveAuthTests {
         #expect(signedIn.token.count == 43)
         #expect(signedIn.user.displayName.isEmpty == false)
 
-        // 2. the token works.
+        // 2. the token works — and `me` answers the account **and** its `requests` block (2026-10-25). The block
+        // itself is a server fact this suite cannot assert on (it depends on whether Luther has linked the
+        // account in Overseerr), so only its arrival is checked, and the sign-in's own fields are compared.
         let me = try await client.me(token: signedIn.token)
-        #expect(me == signedIn.user)
+        #expect(me.user == signedIn.user)
+        #expect(me.requests?.enabled == (me.requests?.overseerrUserId != nil))
 
         // 3. sign out, and it really ends: the same token is refused afterwards.
         try await client.signOut(token: signedIn.token)

@@ -22,7 +22,7 @@ final class SeerrDiscoverViewModel {
     }
 
     var isLoggedIn: Bool {
-        store.isLoggedIn
+        store.isRequestsEnabled
     }
 
     var hasContent: Bool {
@@ -57,14 +57,14 @@ final class SeerrDiscoverViewModel {
     }
 
     private func fetch(preservingExistingContent: Bool) async {
-        guard !isLoading, let baseURL else { return }
+        guard !isLoading else { return }
 
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
 
         do {
-            let repository = SeerrDiscoverRepository(baseURL: baseURL)
+            let repository = SeerrDiscoverRepository()
             let trendingPage = try await repository.getTrending(page: 1)
             let moviesPage = try await repository.discoverMovies(page: 1)
             let tvPage = try await repository.discoverTV(page: 1)
@@ -84,7 +84,7 @@ final class SeerrDiscoverViewModel {
             upcomingMovies = upcomingMoviesPage.results
             upcomingTV = upcomingTVPage.results
         } catch {
-            handleLoadError(preservingExistingContent: preservingExistingContent)
+            handleLoadError(error, preservingExistingContent: preservingExistingContent)
         }
 
         await loadRequestCount()
@@ -94,20 +94,14 @@ final class SeerrDiscoverViewModel {
         canManageRequests ? pendingRequestsCount : 0
     }
 
-    private var baseURL: URL? {
-        guard let baseURLString = store.baseURLString else { return nil }
-        return URL(string: baseURLString)
-    }
-
     private func loadRequestCount() async {
         guard canManageRequests else {
             pendingRequestsCount = 0
             return
         }
-        guard let baseURL else { return }
 
         do {
-            let repository = SeerrRequestRepository(baseURL: baseURL)
+            let repository = SeerrRequestRepository()
             let count = try await repository.getRequestCount()
             pendingRequestsCount = count.pending
         } catch {
@@ -123,11 +117,13 @@ final class SeerrDiscoverViewModel {
         return formatter
     }()
 
-    private func handleLoadError(preservingExistingContent: Bool) {
+    private func handleLoadError(_ error: Error, preservingExistingContent: Bool) {
         if preservingExistingContent, hasContent {
             errorMessage = nil
         } else {
-            errorMessage = String(localized: .init("common.errors.tryAgainLater"))
+            // The server's own sentence (or a plain line about the status): "Requests aren't set up for your
+            // account yet. Ask Luther.", "Can't reach WeFlix…", "WeFlix is having trouble with requests."
+            errorMessage = error.seerrSentence()
         }
     }
 }

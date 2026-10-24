@@ -45,22 +45,6 @@ final class SettingsNavigation {
         enterDetail()
     }
 
-    func finishSeerrSetup() {
-        guard pages[.integrations, default: []].count > 1 else { return }
-        pages[.integrations] = Array(pages[.integrations, default: []].prefix(1))
-        if category == .integrations, !sidebarFocused {
-            enterDetail()
-        }
-    }
-
-    func restartSeerrSetup() {
-        guard pages[.integrations, default: []].count > 2 else { return }
-        pages[.integrations] = Array(pages[.integrations, default: []].prefix(2))
-        if category == .integrations, !sidebarFocused {
-            enterDetail()
-        }
-    }
-
     func enterDetail() {
         sidebarFocused = false
         pendingDetailFocus = pageID
@@ -81,7 +65,9 @@ final class SettingsNavigation {
 }
 
 enum SettingsCategory: String, CaseIterable, Identifiable {
-    case accounts, profiles, playback, audio, subtitles, interface, integrations
+    /// `licences` is the GPL-3.0 attribution — WeFlix for Apple is a modified version of Strimr by wunax, and a
+    /// modified version has to say so inside the app as well as in `README.md` (2026-10-25).
+    case accounts, profiles, playback, audio, subtitles, interface, integrations, licences
 
     /// Restricted Plex profiles cannot manage accounts nor profiles.
     static func visible(canManageAccounts: Bool) -> [SettingsCategory] {
@@ -101,6 +87,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .subtitles: "settings.playback.subtitles.title"
         case .interface: "settings.interface.title"
         case .integrations: "settings.integrations.title"
+        case .licences: "Licences"
         }
     }
 
@@ -113,6 +100,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .subtitles: "captions.bubble"
         case .interface: "rectangle.grid.2x2"
         case .integrations: "square.stack.3d.up"
+        case .licences: "doc.text"
         }
     }
 }

@@ -236,6 +236,7 @@ struct SettingsView: View {
         case .interface:
             SettingsInterfaceView(settingsManager: settingsManager, libraryStore: libraryStore)
         case .integrations: IntegrationsView()
+        case .licences: LicencesView()
         }
     }
 }

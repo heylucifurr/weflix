@@ -27,7 +27,7 @@ struct MainView: View {
                 Section {
                     sidebarLabel("tabs.home", systemImage: "house.fill", item: .home)
 
-                    if settingsManager.interface.displaySeerrDiscoverTab, seerrStore.isLoggedIn {
+                    if settingsManager.interface.displaySeerrDiscoverTab, seerrStore.isRequestsEnabled {
                         sidebarLabel("tabs.discover", systemImage: "sparkles", item: .discover)
                     }
 

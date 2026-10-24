@@ -279,7 +279,7 @@ final class SeerrMediaRequestViewModel {
             }
             loadedRequestType = requestType
         } catch {
-            servicesErrorMessage = errorMessage(for: error)
+            servicesErrorMessage = error.seerrSentence()
         }
     }
 
@@ -316,7 +316,7 @@ final class SeerrMediaRequestViewModel {
                 selectedTags = []
             }
         } catch {
-            servicesErrorMessage = errorMessage(for: error)
+            servicesErrorMessage = error.seerrSentence()
         }
     }
 
@@ -442,18 +442,11 @@ final class SeerrMediaRequestViewModel {
     }
 
     private var requestRepository: SeerrRequestRepository? {
-        guard let baseURL else { return nil }
-        return SeerrRequestRepository(baseURL: baseURL, session: session)
+        SeerrRequestRepository(session: session)
     }
 
     private var serviceRepository: SeerrServiceRepository? {
-        guard let baseURL else { return nil }
-        return SeerrServiceRepository(baseURL: baseURL, session: session)
-    }
-
-    private var baseURL: URL? {
-        guard let baseURLString = store.baseURLString else { return nil }
-        return URL(string: baseURLString)
+        SeerrServiceRepository(session: session)
     }
 
     private var canRequestStandard: Bool {
@@ -499,20 +492,10 @@ final class SeerrMediaRequestViewModel {
         ], user: store.user, options: .init(type: .or))
     }
 
-    private func errorMessage(for error: Error) -> String {
-        let key = switch error {
-        case SeerrAPIError.invalidURL:
-            "integrations.seerr.error.invalidURL"
-        case SeerrAPIError.requestFailed:
-            "integrations.seerr.error.connection"
-        default:
-            "common.errors.tryAgainLater"
-        }
-        return String(localized: .init(key))
-    }
-
+    /// The server's own sentence when it sent one, and a plain line otherwise: "Requests aren't set up for your
+    /// account yet. Ask Luther.", Overseerr's "already requested", a quota refusal, or "Can't reach WeFlix".
     private func presentError(_ error: Error) {
-        errorMessage = errorMessage(for: error)
+        errorMessage = error.seerrSentence()
         isShowingError = true
     }
 

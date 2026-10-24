@@ -1,8 +1,14 @@
 import SwiftUI
 
+/// Settings → Integrations on tvOS: **one card, and one screen behind it** (2026-10-25).
+///
+/// It used to build a `SeerrViewModel` (an Overseerr address, a sign-in state, a "start setup" flow) and pass it
+/// to `SeerrView`. None of that exists any more: requests are answered by `https://weflix.me` with the account's
+/// own WeFlix token, so the card says whether the server has connected this account and `SeerrView` shows what it
+/// was told. The card's subtitle used to print the user's Overseerr address, which is exactly the thing the app
+/// must not know — it prints the server's answer instead.
 @MainActor
 struct IntegrationsView: View {
-    @Environment(SessionManager.self) private var sessionManager
     @Environment(SeerrStore.self) private var seerrStore
 
     var body: some View {
@@ -12,19 +18,13 @@ struct IntegrationsView: View {
             SettingsScrollView {
                 VStack(alignment: .leading, spacing: 28) {
                     SettingsLink(title: "integrations.seerr.title") {
-                        SeerrView(
-                            viewModel: SeerrViewModel(
-                                store: seerrStore,
-                                sessionManager: sessionManager,
-                                sessionService: SeerrSessionService(),
-                            ),
-                        )
+                        SeerrView()
                     } label: {
                         integrationCard(
                             title: "integrations.seerr.title",
                             subtitle: seerrStatusText,
                             systemImage: "film",
-                            isConnected: seerrStore.isLoggedIn,
+                            isConnected: seerrStore.isRequestsEnabled,
                         )
                     }
                     .buttonStyle(.bordered)
@@ -39,11 +39,9 @@ struct IntegrationsView: View {
     }
 
     private var seerrStatusText: String {
-        if let baseURL = seerrStore.baseURLString {
-            return baseURL
-        }
-
-        return String(localized: "integrations.seerr.setup.description")
+        seerrStore.isRequestsEnabled
+            ? "Connected via WeFlix"
+            : "Requests aren't set up for your account yet. Ask Luther."
     }
 
     private func integrationCard(

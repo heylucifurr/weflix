@@ -7,6 +7,26 @@ struct WeFlixUser: Decodable, Equatable, Sendable {
     let isOwner: Bool
 }
 
+/// What the server says this account's **requests** are (2026-10-25) — `GET /api/app/me`'s `requests` block.
+///
+/// It is three facts and no credentials: the app holds no Overseerr key and no Overseerr session, so the server
+/// has to tell it whether the requests screens have anything to do, which Overseerr user it is (so the app can
+/// answer "is this request mine?"), and what it is allowed to attempt.
+struct WeFlixRequests: Decodable, Equatable, Sendable {
+    /// May this account browse and request? The switch the whole requests UI hangs on.
+    let enabled: Bool
+    /// The Overseerr user this account is, or `null` when the account has not been linked to one.
+    let overseerrUserId: Int?
+    /// Overseerr's permission bits for this account, as `SeerrPermissionService` reads them. `0` when disabled.
+    let permissions: Int
+}
+
+/// `GET /api/app/me`'s whole answer: who this is, and what they may do.
+struct WeFlixMe: Equatable, Sendable {
+    let user: WeFlixUser
+    let requests: WeFlixRequests?
+}
+
 /// A refusal, already worded for a person.
 ///
 /// The server's own sentences are used where the server sent one — "Invalid username or password", the pending
@@ -101,10 +121,16 @@ struct WeFlixAuthClient {
         return (answer.token, answer.user)
     }
 
-    /// `GET /api/app/me` — who this token belongs to, or `.unauthenticated` once it has been revoked.
+    /// `GET /api/app/me` — who this token belongs to, and **what it may do** (2026-10-25).
     ///
     /// Called on every launch: a token the server no longer recognises must not keep a signed-in screen up.
-    func me(token: String) async throws -> WeFlixUser {
+    ///
+    /// The answer's `requests` block is the app's one feature switch for the requests screens
+    /// (`SeerrStore.adopt`): whether this account may browse and request, which Overseerr user it is, and the
+    /// permission bits the server grants it. It ships in the same call deliberately — a second round trip on
+    /// every launch would be one more thing to fail, and a launch that answered "signed in" must already know
+    /// whether the main screen has anything to show.
+    func me(token: String) async throws -> WeFlixMe {
         let answer: MeAnswer = try await send(
             WeFlixServer.mePath,
             method: "GET",
@@ -113,7 +139,7 @@ struct WeFlixAuthClient {
             unauthorized: .tokenIsOver,
         )
 
-        return answer.user
+        return WeFlixMe(user: answer.user, requests: answer.requests)
     }
 
     /// `POST /api/app/auth/logout` — end this device's token on the server.
@@ -161,6 +187,7 @@ struct WeFlixAuthClient {
 
     private struct MeAnswer: Decodable {
         let user: WeFlixUser
+        let requests: WeFlixRequests?
     }
 
     private struct LogoutAnswer: Decodable {

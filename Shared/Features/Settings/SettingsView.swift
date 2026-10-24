@@ -69,9 +69,17 @@ struct SettingsView: View {
                     }
                 }
             #endif
+
+            // GPL-3.0: a modified version has to say what it came from, and the app says it here as well as in
+            // `README.md` (`LicencesView`). Not behind a debug flag and not only on macOS — it is the licence.
+            Section {
+                NavigationLink("Licences") {
+                    LicencesView()
+                }
+            }
         }
         #if os(iOS)
-        .listStyle(.insetGrouped)
+            .listStyle(.insetGrouped)
         #endif
         .navigationTitle("settings.title")
     }

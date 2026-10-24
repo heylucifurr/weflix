@@ -21,7 +21,6 @@ final class SeerrSearchViewModel {
 
     func search() async {
         let trimmedQuery = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let baseURL else { return }
 
         if trimmedQuery.isEmpty {
             searchResults = []
@@ -35,19 +34,14 @@ final class SeerrSearchViewModel {
         defer { isSearching = false }
 
         do {
-            let repository = SeerrDiscoverRepository(baseURL: baseURL)
+            let repository = SeerrDiscoverRepository()
             let response = try await repository.search(query: trimmedQuery, page: 1)
             guard !Task.isCancelled else { return }
             // Person results aren't handled yet in the UI.
             searchResults = response.results.filter { $0.mediaType != .person }
         } catch {
             guard !Task.isCancelled, !error.isCancellation else { return }
-            errorMessage = String(localized: .init("common.errors.tryAgainLater"))
+            errorMessage = error.seerrSentence()
         }
-    }
-
-    private var baseURL: URL? {
-        guard let baseURLString = store.baseURLString else { return nil }
-        return URL(string: baseURLString)
     }
 }

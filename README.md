@@ -114,3 +114,9 @@ Beta versions are available through [TestFlight](https://testflight.apple.com/jo
     <img src="Screenshots/macos/macos_search.jpg" alt="macOS Search" width="360" />
   </p>
 </details>
+
+## Licence
+
+WeFlix for Apple is a modified version of Strimr by wunax (https://github.com/wunax/strimr), licensed GPL-3.0. Modified by Luther, 2026.
+
+The licence text is `LICENSE` in this repository, and the same notice is shown inside the app, under **Settings → Licences**.

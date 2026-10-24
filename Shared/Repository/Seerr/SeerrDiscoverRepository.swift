@@ -3,8 +3,8 @@ import Foundation
 final class SeerrDiscoverRepository {
     private let client: SeerrNetworkClient
 
-    init(baseURL: URL, session: URLSession = .shared) {
-        client = SeerrNetworkClient(baseURL: baseURL, session: session)
+    init(session: URLSession = .shared) {
+        client = SeerrNetworkClient(session: session)
     }
 
     func getTrending(page: Int) async throws -> SeerrPaginatedResponse<SeerrMedia> {

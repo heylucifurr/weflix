@@ -98,10 +98,6 @@ final class SeerrMediaDetailViewModel {
 
     func loadDetails() async {
         guard !isLoading else { return }
-        guard let baseURL else {
-            errorMessage = String(localized: "integrations.seerr.error.invalidURL")
-            return
-        }
 
         isLoading = true
         if media.mediaType == .tv {
@@ -115,7 +111,7 @@ final class SeerrMediaDetailViewModel {
         }
 
         do {
-            let repository = SeerrMediaRepository(baseURL: baseURL)
+            let repository = SeerrMediaRepository()
             switch media.mediaType {
             case .movie:
                 media = try await repository.getMovie(id: media.id)
@@ -132,15 +128,14 @@ final class SeerrMediaDetailViewModel {
                 await loadSeasonIfNeeded()
             }
         } catch {
-            let message = errorMessage(for: error)
+            let message = error.seerrSentence()
             errorMessage = message
             seasonsErrorMessage = message
         }
     }
 
     func loadRatings() async {
-        guard let baseURL else { return }
-        let repository = SeerrMediaRepository(baseURL: baseURL, session: session)
+        let repository = SeerrMediaRepository(session: session)
         switch media.mediaType {
         case .movie:
             ratings = try? await repository.getMovieRatings(id: media.id)
@@ -156,8 +151,7 @@ final class SeerrMediaDetailViewModel {
             collection = nil
             return
         }
-        guard let baseURL else { return }
-        let repository = SeerrMediaRepository(baseURL: baseURL, session: session)
+        let repository = SeerrMediaRepository(session: session)
         if let refreshed = try? await repository.getCollection(id: summary.id) {
             collection = refreshed
         }
@@ -191,7 +185,6 @@ final class SeerrMediaDetailViewModel {
     }
 
     func requestCollection() async {
-        guard let baseURL else { return }
         let parts = collectionRequestableParts
         guard !parts.isEmpty else { return }
 
@@ -199,7 +192,7 @@ final class SeerrMediaDetailViewModel {
         collectionErrorMessage = nil
         defer { isRequestingCollection = false }
 
-        let repository = SeerrRequestRepository(baseURL: baseURL, session: session)
+        let repository = SeerrRequestRepository(session: session)
         var failedCount = 0
         for part in parts {
             let payload = SeerrMediaRequestPayload(
@@ -234,10 +227,9 @@ final class SeerrMediaDetailViewModel {
     }
 
     func loadRelatedContent() async {
-        guard let baseURL else {
-            let message = String(localized: "integrations.seerr.error.invalidURL")
-            recommendationsErrorMessage = message
-            similarErrorMessage = message
+        guard media.mediaType == .movie || media.mediaType == .tv else {
+            recommendations = []
+            similar = []
             return
         }
         guard media.mediaType == .movie || media.mediaType == .tv else {
@@ -246,7 +238,7 @@ final class SeerrMediaDetailViewModel {
             return
         }
 
-        let repository = SeerrMediaRepository(baseURL: baseURL)
+        let repository = SeerrMediaRepository()
 
         isLoadingRecommendations = true
         recommendationsErrorMessage = nil
@@ -262,7 +254,7 @@ final class SeerrMediaDetailViewModel {
                 recommendations = []
             }
         } catch {
-            recommendationsErrorMessage = errorMessage(for: error)
+            recommendationsErrorMessage = error.seerrSentence()
         }
 
         isLoadingSimilar = true
@@ -279,7 +271,7 @@ final class SeerrMediaDetailViewModel {
                 similar = []
             }
         } catch {
-            similarErrorMessage = errorMessage(for: error)
+            similarErrorMessage = error.seerrSentence()
         }
     }
 
@@ -392,12 +384,10 @@ final class SeerrMediaDetailViewModel {
     }
 
     func makeRequestViewModel() -> SeerrMediaRequestViewModel? {
-        guard baseURL != nil else { return nil }
         return SeerrMediaRequestViewModel(media: media, store: store, session: session)
     }
 
     func makeManageRequestsViewModel() -> SeerrManageRequestsViewModel? {
-        guard baseURL != nil else { return nil }
         return SeerrManageRequestsViewModel(media: media, store: store, session: session)
     }
 
@@ -424,20 +414,20 @@ final class SeerrMediaDetailViewModel {
     }
 
     private func loadSeason(number: Int) async {
-        guard let baseURL, media.mediaType == .tv else { return }
+        guard media.mediaType == .tv else { return }
 
         isLoadingEpisodes = true
         episodesErrorMessage = nil
         defer { isLoadingEpisodes = false }
 
         do {
-            let repository = SeerrMediaRepository(baseURL: baseURL)
+            let repository = SeerrMediaRepository()
             let season = try await repository.getTVSeason(id: media.id, seasonNumber: number)
             guard selectedSeasonNumber == number else { return }
             episodes = season.episodes ?? []
         } catch {
             guard selectedSeasonNumber == number else { return }
-            episodesErrorMessage = errorMessage(for: error)
+            episodesErrorMessage = error.seerrSentence()
         }
     }
 
@@ -537,29 +527,12 @@ final class SeerrMediaDetailViewModel {
         return status == .available
     }
 
-    private var baseURL: URL? {
-        guard let baseURLString = store.baseURLString else { return nil }
-        return URL(string: baseURLString)
-    }
-
     private func formattedDate(from dateString: String?) -> String? {
         guard let dateString else { return nil }
         guard let date = SeerrMediaDetailViewModel.inputDateFormatter.date(from: dateString) else {
             return dateString
         }
         return SeerrMediaDetailViewModel.outputDateFormatter.string(from: date)
-    }
-
-    private func errorMessage(for error: Error) -> String {
-        let key = switch error {
-        case SeerrAPIError.invalidURL:
-            "integrations.seerr.error.invalidURL"
-        case SeerrAPIError.requestFailed:
-            "integrations.seerr.error.connection"
-        default:
-            "common.errors.tryAgainLater"
-        }
-        return String(localized: .init(key))
     }
 
     private static let inputDateFormatter: DateFormatter = {

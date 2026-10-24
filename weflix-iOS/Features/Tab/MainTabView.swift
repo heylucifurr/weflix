@@ -89,7 +89,7 @@ struct MainTabView: View {
                 homeTabContent
             }
 
-            if settingsManager.interface.displaySeerrDiscoverTab, seerrStore.isLoggedIn {
+            if settingsManager.interface.displaySeerrDiscoverTab, seerrStore.isRequestsEnabled {
                 Tab("tabs.discover", systemImage: "sparkles", value: MainCoordinator.Tab.seerrDiscover) {
                     discoverTabContent
                 }

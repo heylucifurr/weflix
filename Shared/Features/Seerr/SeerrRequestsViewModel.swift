@@ -252,7 +252,7 @@ final class SeerrRequestsViewModel {
     }
 
     func avatarURL(for user: SeerrUser?) -> URL? {
-        SeerrRequestFormatting.avatarURL(for: user, baseURL: baseURL)
+        SeerrRequestFormatting.avatarURL(for: user)
     }
 
     func relativeDateText(from value: String?) -> String? {
@@ -369,30 +369,17 @@ final class SeerrRequestsViewModel {
     }
 
     private var mediaRepository: SeerrMediaRepository? {
-        guard let baseURL else { return nil }
-        return SeerrMediaRepository(baseURL: baseURL, session: session)
+        SeerrMediaRepository(session: session)
     }
 
     private var requestRepository: SeerrRequestRepository? {
-        guard let baseURL else { return nil }
-        return SeerrRequestRepository(baseURL: baseURL, session: session)
+        SeerrRequestRepository(session: session)
     }
 
-    private var baseURL: URL? {
-        guard let baseURLString = store.baseURLString else { return nil }
-        return URL(string: baseURLString)
-    }
-
+    /// The server's own sentence when it sent one, and a plain line otherwise — never "check your connection" for
+    /// a title that has already been asked for, and never silence for an account that is not linked yet.
     private func presentError(_ error: Error) {
-        let key = switch error {
-        case SeerrAPIError.invalidURL:
-            "integrations.seerr.error.invalidURL"
-        case SeerrAPIError.requestFailed:
-            "integrations.seerr.error.connection"
-        default:
-            "common.errors.tryAgainLater"
-        }
-        errorMessage = String(localized: .init(key))
+        errorMessage = error.seerrSentence()
         isShowingError = true
     }
 }
