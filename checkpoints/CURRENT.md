@@ -18,13 +18,22 @@ first call. The server proxy forwarded them; it now narrows that one path to `ta
   `SeerrRequestQuery` loses `mediaType` and `isAscending`. The status chips stay.
 - `SeerrRequestsViewModel`'s two reads send only the four keys.
 
-**Not verified:** whether Overseerr's `/request` `filter` accepts every chip the app offers — `completed` in
-particular (the app's set is `all, pending, approved, completed, processing, failed, available, unavailable,
-deleted`). Overseerr's filter schema is recorded nowhere in either repository and no live instance was reachable
-from this workstation, so this is the next thing to check with a real account rather than a guess to encode now.
+- `SeerrRequestStatusFilter` is now **exactly** Overseerr's allowed set: `all, pending, approved, processing, failed,
+  available, unavailable`.
 
-**Gate:** iOS · tvOS · macOS **BUILD SUCCEEDED**, 0 errors; `xcodebuild test` **TEST SUCCEEDED**; server `tsc` 0,
-`app-seerr-proxy` **18/18**, `build` exit 0.
+**The second half of the same defect, measured live (2026-10-25).** Luther tapped **Completed** and Overseerr
+refused it by name:
+
+> `request.query.filter should be equal to one of the allowed values: all, approved, available, pending,
+> processing, unavailable, failed`
+
+So the app's chips carried **two values that can only ever fail** — `completed` and `deleted` — and they are gone.
+Overseerr's own word for a fulfilled request is *available*, which the app already offered, so nothing was lost.
+The refusal arrived as the Seerr alert on the screen (`Seerr / request.query.filter should be equal to one of the
+allowed values: …`), which is the proxy relaying Overseerr's own body — the right behaviour: the real reason, not a
+generic sentence.
+
+**Gate after it:** iOS · tvOS · macOS **BUILD SUCCEEDED**, 0 errors; `xcodebuild test` **TEST SUCCEEDED**.
 
 
 ## PHASE APP WATCHLIST — My Watchlist and My Requests in the profile menu, and a simpler iPhone Settings (2026-10-25, Cline)

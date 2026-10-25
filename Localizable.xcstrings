@@ -14820,6 +14820,7 @@
       }
     },
     "seerr.requests.filter.movies" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -14836,6 +14837,7 @@
       }
     },
     "seerr.requests.filter.series" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -14868,6 +14870,7 @@
       }
     },
     "seerr.requests.options.oldestFirst" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -14916,6 +14919,7 @@
       }
     },
     "seerr.requests.options.type" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
