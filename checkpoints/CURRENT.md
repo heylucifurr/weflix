@@ -1,3 +1,26 @@
+## FIX — the library filters are chips in the row, not a pill that uncollapses (2026-10-25, Cline)
+
+**Luther, looking at the row the commit above produced:** *"no need to uncollapse the filer. i want it all visible in
+one row like i explained previously."*
+
+Combining the two rows was not the whole ask: `Filter` was still a **pill**, and tapping it *uncollapsed* the
+library's real filters (`Genre`, `Decade`, …) as a second line. The filters are now **chips in the row itself**, in
+the slot where that pill was — nothing to open, nothing below.
+
+- The pill block in `LibraryBrowsePillsRow.serverPills` (`Shared/Features/Library/LibraryBrowseControlsView.swift`)
+  is replaced by the Plex filter chips (and the Jellyfin ones, for a Jellyfin server) — the same `ForEach` the
+  panel used to draw.
+- `LibraryBrowseControlsView`'s `.filters` panel renders `EmptyView()` and its `filterOptions`/`filterLabel` are
+  gone; `filterLabel` now lives in the pills row, where the chips are.
+- **Unchanged on purpose:** a filter with **values** still opens its chooser as a **sheet** (`toggleFilter`), and a
+  boolean one (`Unwatched`, `In progress`) still toggles on the spot. The **Type** (`Movies`) and **Sort** pills
+  keep their one-tap option rows — he named the filter, and a sort's ten-odd chips inline would be a much longer
+  row. **If "all visible" meant those too, say so and it is the same change twice.**
+
+**Gate:** iOS · tvOS · macOS **BUILD SUCCEEDED**, 0 errors; `xcodebuild test` **TEST SUCCEEDED — 425 passed**.
+**Not verified:** no eye has seen the row.
+
+
 ## FEATURE — one filter row on the library screen, and the app's plays on the dashboard (2026-10-25, Cline)
 
 **Luther, two asks in one message.**

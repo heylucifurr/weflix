@@ -134,7 +134,9 @@ struct LibraryBrowseControlsView: View {
         case .type:
             typeOptions
         case .filters:
-            filterOptions
+            // Empty on purpose: the filters are chips in the row itself now, so there is nothing to uncollapse
+            // (Luther, 2026-10-25). The case stays because the panel state is still a valid thing to hold.
+            EmptyView()
         case .sort:
             sortOptions
         }
@@ -158,44 +160,6 @@ struct LibraryBrowseControlsView: View {
         }
         .mouseDragScrolling()
     }
-
-    private var filterOptions: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: LayoutMetrics.chipSpacing) {
-                if viewModel.isJellyfinBrowse {
-                    ForEach(LibraryBrowseControlsViewModel.JellyfinFilter.allCases) { filter in
-                        let isSelected = viewModel.jellyfinFilterIsSelected(filter)
-                        LibraryBrowsePillButton(
-                            title: viewModel.jellyfinFilterLabel(filter),
-                            systemImage: isSelected && filter.isBoolean ? "checkmark" : nil,
-                            isSelected: isSelected,
-                            showsDisclosure: !filter.isBoolean,
-                        ) {
-                            viewModel.toggleJellyfinFilter(filter)
-                        }
-                    }
-                } else {
-                    ForEach(viewModel.availableFilters, id: \.filter) { filter in
-                        let selection = viewModel.filterSelection(for: filter)
-                        let isSelected = selection?.isEnabled == true
-                        let label = filterLabel(for: filter, selection: selection)
-
-                        LibraryBrowsePillButton(
-                            title: label,
-                            systemImage: isSelected ? "checkmark" : nil,
-                            isSelected: isSelected,
-                            showsDisclosure: !filter.isBoolean,
-                        ) {
-                            viewModel.toggleFilter(filter)
-                        }
-                    }
-                }
-            }
-            .padding(rowPadding)
-        }
-        .mouseDragScrolling()
-    }
-
     private var sortOptions: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: LayoutMetrics.chipSpacing) {
@@ -231,14 +195,6 @@ struct LibraryBrowseControlsView: View {
             .padding(rowPadding)
         }
         .mouseDragScrolling()
-    }
-
-    private func filterLabel(
-        for filter: PlexSectionItemFilter,
-        selection: LibraryBrowseControlsViewModel.FilterSelection?,
-    ) -> String {
-        guard let selection, let option = selection.selectedOption else { return filter.title }
-        return filter.title + ": " + option.title
     }
 
     private func sortDirectionImage(
@@ -337,13 +293,40 @@ struct LibraryBrowsePillsRow: View {
         }
 
         if viewModel.showsFilterPill {
-            LibraryBrowsePillButton(
-                title: viewModel.filterPillTitle,
-                systemImage: "line.3.horizontal.decrease.circle",
-                isSelected: viewModel.activePanel == .filters,
-                showsDisclosure: true,
-            ) {
-                viewModel.togglePanel(.filters)
+            /*
+             * The filters **themselves**, not a chip that reveals them (Luther, 2026-10-25): *"no need to uncollapse
+             * the filer. i want it all visible in one row."* They used to sit behind a `Filter` pill that opened a
+             * second line; now they are chips in this one.
+             *
+             * Choosing among a filter's **values** is still a sheet (`toggleFilter` opens it for anything that is
+             * not a boolean), and a boolean filter still toggles on the spot.
+             */
+            if viewModel.isJellyfinBrowse {
+                ForEach(LibraryBrowseControlsViewModel.JellyfinFilter.allCases) { filter in
+                    let isSelected = viewModel.jellyfinFilterIsSelected(filter)
+                    LibraryBrowsePillButton(
+                        title: viewModel.jellyfinFilterLabel(filter),
+                        systemImage: isSelected && filter.isBoolean ? "checkmark" : nil,
+                        isSelected: isSelected,
+                        showsDisclosure: !filter.isBoolean,
+                    ) {
+                        viewModel.toggleJellyfinFilter(filter)
+                    }
+                }
+            } else {
+                ForEach(viewModel.availableFilters, id: \.filter) { filter in
+                    let selection = viewModel.filterSelection(for: filter)
+                    let isSelected = selection?.isEnabled == true
+
+                    LibraryBrowsePillButton(
+                        title: filterLabel(for: filter, selection: selection),
+                        systemImage: isSelected ? "checkmark" : nil,
+                        isSelected: isSelected,
+                        showsDisclosure: !filter.isBoolean,
+                    ) {
+                        viewModel.toggleFilter(filter)
+                    }
+                }
             }
         }
 
@@ -367,6 +350,15 @@ struct LibraryBrowsePillsRow: View {
                 action: viewModel.resetSelection,
             )
         }
+    }
+
+    /// A filter's chip title: its own name, plus the chosen value when it has one — `Genre: Action`.
+    private func filterLabel(
+        for filter: PlexSectionItemFilter,
+        selection: LibraryBrowseControlsViewModel.FilterSelection?,
+    ) -> String {
+        guard let selection, let option = selection.selectedOption else { return filter.title }
+        return filter.title + ": " + option.title
     }
 }
 
