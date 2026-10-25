@@ -158,13 +158,37 @@ struct LibraryBrowseControlsViewModelTests {
             ("editionTitle", "Edition"),
             ("label", "Labels"),
             ("location", "Folder Location"),
+            ("hdr10Plus", "HDR10+"),
+            ("inProgress", "In Progress"),
+            ("subtitleLanguage", "Subtitle Language"),
+            ("collection", "Collection"),
         ]))
 
         // Luther's list, gone from the menu (2026-10-25) …
         #expect(controls.visibleFilters.map(\.filter) == ["unwatched", "genre"])
         // … while Plex still reported every one of them, and the pill still has something to open.
-        #expect(controls.availableFilters.count == 16)
+        #expect(controls.availableFilters.count == 20)
         #expect(controls.showsFilterPill)
+    }
+
+    @Test func `a filter that is not offered is dropped from a saved selection, not just hidden`() throws {
+        // A hidden filter has no pill left to reach it, so one that was already on would be stuck on for good —
+        // the same trap as the saved `Unwatched` filter that took the whole library screen down. It is therefore
+        // dropped from the query and from the selection, not merely taken out of the menu.
+        let controls = makeControls(restoring: PlexSelection(filters: [
+            "unwatched": .init(isEnabled: true),
+            "collection": .init(isEnabled: true, optionKey: "12", optionTitle: "Christmas"),
+        ]))
+
+        // Before meta even lands, the saved hidden filter is not sent …
+        #expect(queryItems(controls)["unwatched"] == "1")
+        #expect(queryItems(controls)["collection"] == nil)
+
+        // … and once it lands it is not applied either. `applyMeta` reports a change so the screen reloads.
+        #expect(try controls.applyMeta(meta(addingFilters: [("collection", "Collection")])))
+        #expect(controls.selectedFilters.keys.sorted() == ["unwatched"])
+        #expect(queryItems(controls)["collection"] == nil)
+        #expect(queryItems(controls)["unwatched"] == "1")
     }
 
     @Test func `a hidden filter is caught by its key or by its title`() throws {

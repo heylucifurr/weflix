@@ -216,26 +216,35 @@ final class LibraryBrowseControlsViewModel {
         selectedDisplayType?.filters ?? []
     }
 
-    /// The filters **not offered** (Luther, 2026-10-25).
+    /// The filters **not offered** (Luther, 2026-10-25: *"remove some of it.. Decade Resolution HDR DOVI HDR10
+    /// ATMOS video codec audio codec subtitle codec audio layout audio language edition labels folder location"*,
+    /// then *"few filters left that i dont need: HDR10+ In Progress Subtitle Language Collection"*).
     ///
-    /// Plex reports a long technical tail for a movie section — `Decade`, `Resolution`, `HDR`, `DoVi`, `HDR10`,
-    /// `ATMOS`, `Video Codec`, `Audio Codec`, `Subtitle Codec`, `Audio Layout`, `Audio Language`, `Edition`,
-    /// `Labels`, `Folder Location` — and none of it is how anybody picks something to watch. Matched on the
-    /// filter's own key **or** its title, lower-cased and de-spaced, so either spelling catches it.
-    ///
-    /// A hidden filter is simply not in the menu, so it can never be switched on.
+    /// Plex reports a long technical tail for a movie section and none of it is how anybody picks something to
+    /// watch. Matched on the filter's own key **or** its title, lower-cased and de-spaced, so either spelling
+    /// catches it.
     private static let hiddenFilterNames: Set<String> = [
-        "decade", "resolution", "hdr", "hdr10", "dovi", "dolbyvision", "atmos",
-        "videocodec", "audiocodec", "subtitlecodec", "audiolayout", "audiolanguage",
+        "decade", "resolution", "hdr", "hdr10", "hdr10+", "hdr10plus", "dovi", "dolbyvision", "atmos",
+        "videocodec", "audiocodec", "subtitlecodec", "audiolayout", "audiolanguage", "subtitlelanguage",
         "edition", "editiontitle", "label", "labels", "location", "folderlocation", "folder",
+        "inprogress", "collection",
     ]
 
     /// The filters the `Filter` menu offers: Plex's list, minus the technical tail above.
     var visibleFilters: [PlexSectionItemFilter] {
-        availableFilters.filter { filter in
-            !Self.hiddenFilterNames.contains(Self.normalizedFilterName(filter.filter))
-                && !Self.hiddenFilterNames.contains(Self.normalizedFilterName(filter.title))
-        }
+        availableFilters.filter { !Self.isHiddenFilter(name: $0.filter, title: $0.title) }
+    }
+
+    /// Whether a filter is one the app does not offer.
+    ///
+    /// `title` is optional because a **saved** selection carries only Plex's key. And a hidden filter must not be
+    /// merely invisible: with no pill left to reach it, one that was already on could never be switched off again
+    /// — the same trap as the saved `Unwatched` filter that took the whole library screen down. So restores and
+    /// the live selection **drop** them, they do not just hide them.
+    private static func isHiddenFilter(name: String, title: String?) -> Bool {
+        if hiddenFilterNames.contains(normalizedFilterName(name)) { return true }
+        guard let title else { return false }
+        return hiddenFilterNames.contains(normalizedFilterName(title))
     }
 
     /// `"Video Codec"` → `"videocodec"`, so a key and a title are compared the same way.
@@ -598,7 +607,9 @@ final class LibraryBrowseControlsViewModel {
 
         if let pendingRestore {
             setQueryItem(name: "sort", value: pendingRestore.sortQueryValue, in: &items)
-            for (name, filter) in pendingRestore.filters where filter.isEnabled {
+            for (name, filter) in pendingRestore.filters
+                where filter.isEnabled && !Self.isHiddenFilter(name: name, title: nil)
+            {
                 setFilterQueryItems(name: name, optionKey: filter.optionKey, fastKey: filter.optionFastKey, in: &items)
             }
             return items
@@ -638,7 +649,9 @@ final class LibraryBrowseControlsViewModel {
 
         var filters: [String: FilterSelection] = [:]
         for (name, saved) in restore.filters {
-            guard let filter = displayType.filters.first(where: { $0.filter == name }) else {
+            guard let filter = displayType.filters.first(where: { $0.filter == name }),
+                  !Self.isHiddenFilter(name: name, title: filter.title)
+            else {
                 changed = true
                 continue
             }
@@ -684,7 +697,9 @@ final class LibraryBrowseControlsViewModel {
             }
         }
 
-        selectedFilters = updatedFilters.filter { availableFilterKeys.contains($0.key) }
+        selectedFilters = updatedFilters.filter {
+            availableFilterKeys.contains($0.key) && !Self.isHiddenFilter(name: $0.key, title: nil)
+        }
 
         if let selectedSort,
            !displayType.sorts.contains(where: { $0.key == selectedSort.sort.key })
