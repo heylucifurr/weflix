@@ -83,6 +83,14 @@ struct LibraryDetailView: View {
             // Using a pill means "show me the grid": that is what the removed Browse chip used to do.
             model.controls.onUserInteraction = { showBrowse() }
             browseViewModel = model
+
+            /*
+             * And load the section **now**, not when the grid appears: the display type, the filters and the sorts
+             * arrive with a browse fetch (`applyMeta`) and are what the pills in this row are made of. Waiting for
+             * the grid meant the row showed `Recommended · 🔳` — nothing to filter with and no way in
+             * (Luther's screenshot, 2026-10-25). `load()` fetches once, so the grid's own `.task` is a no-op.
+             */
+            await model.load()
         }
         .onChange(of: settingsManager.interface.displayCollections) { _, displayCollections in
             if !displayCollections, selectedTab == .collections {

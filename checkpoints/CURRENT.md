@@ -1,3 +1,40 @@
+## FIX — the library row was `Recommended · 🔳`: the pills were never loaded (2026-10-25, Cline)
+
+**Luther, after the two commits above:** *"same still wtf???"* — and a screenshot of the **TV Shows** library settled
+it. The row was:
+
+```
+Recommended   [🔳]
+```
+
+Browse/Collections/Playlists were gone as intended — but so were **`Movies`, `Filter` and `Sort`**, which is the
+whole deliverable. My own bug, and a chicken-and-egg one:
+
+- the pills are built from the section's **meta** — display types, filters, sorts — which only ever arrived with a
+  **browse fetch** (`LibraryBrowseViewModel.fetch` → `controls.applyMeta`, `includeMeta: !hasLoadedMeta`);
+- I gated the grid (`LibraryBrowseView`) behind `selectedTab == .browse`, and Browse is entered **by tapping a pill**
+  — so the meta was never fetched, so no pill was drawn, so there was nothing to tap.
+
+**The fix:** `LibraryDetailView`'s `.task` now `await model.load()` right after creating the model, so the meta and
+the first page are there as the screen opens. `load()` is guarded (`browseItems.isEmpty`), so the grid's own
+`.task` becomes a no-op rather than a second request. iOS and macOS both.
+
+**And a build trap worth recording.** A normal signed build of mine kept failing with
+`weflix-iOS.app: resource fork, Finder information, or similar detritus not allowed` → `Command CodeSign failed`
+even after `xattr -cr`. The cause: `com.apple.FinderInfo` **and** `com.apple.fileprovider.fpfs#P` on the sources —
+this repository lives under `~/Documents`, which a **File Provider** syncs, so anything built **into the repo's
+`build/`** is re-stamped as it is written. (`com.apple.provenance`, also on 412 files, cannot be removed at all.)
+Building into `~/Library/Developer/Xcode/DerivedData` — what Xcode itself uses — is clean and codesigns: proved by
+a full signed build (`-derivedDataPath ~/weflix-verify-dd`, **BUILD SUCCEEDED, 0 errors**), installed and launched
+on the simulator. **The session's earlier `build/DerivedData*` paths are the trap, not the repo or the project.**
+
+### Not verified
+
+The row has **not** been seen by an eye since the fix: verifying it needs a tap into a library, which this harness
+cannot perform, and Luther's screenshot predates the change. Expected row on his Movies library:
+`Recommended · Movies · <filters> · Sort · 🔳`.
+
+
 ## FIX — the library filters are chips in the row, not a pill that uncollapses (2026-10-25, Cline)
 
 **Luther, looking at the row the commit above produced:** *"no need to uncollapse the filer. i want it all visible in
