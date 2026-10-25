@@ -5,6 +5,13 @@ struct SettingsView: View {
     @Environment(SettingsManager.self) private var settingsManager
     @Environment(LibraryStore.self) private var libraryStore
     @Environment(SessionManager.self) private var sessionManager
+    @Environment(WeFlixSessionController.self) private var weflixSession
+
+    /// The **owner**'s settings. A friend's app is the same app, but the interface section, the integrations
+    /// section and the licence notice belong to whoever runs the server (Luther, 2026-10-25).
+    private var isOwner: Bool {
+        weflixSession.isOwner
+    }
 
     var body: some View {
         List {
@@ -36,11 +43,13 @@ struct SettingsView: View {
                     SettingsSubtitlesView()
                 }
 
-                NavigationLink("settings.interface.title") {
-                    SettingsInterfaceView(
-                        settingsManager: settingsManager,
-                        libraryStore: libraryStore,
-                    )
+                if isOwner {
+                    NavigationLink("settings.interface.title") {
+                        SettingsInterfaceView(
+                            settingsManager: settingsManager,
+                            libraryStore: libraryStore,
+                        )
+                    }
                 }
 
                 #if os(macOS)
@@ -50,8 +59,10 @@ struct SettingsView: View {
                     NavigationLink("settings.storage.title") {
                         SettingsStorageView()
                     }
-                    NavigationLink("settings.integrations.title") {
-                        IntegrationsView()
+                    if isOwner {
+                        NavigationLink("settings.integrations.title") {
+                            IntegrationsView()
+                        }
                     }
                 #endif
             }
@@ -67,18 +78,22 @@ struct SettingsView: View {
                     }
                 }
 
-                Section("settings.integrations.title") {
-                    NavigationLink("settings.integrations.manage") {
-                        IntegrationsView()
+                if isOwner {
+                    Section("settings.integrations.title") {
+                        NavigationLink("settings.integrations.manage") {
+                            IntegrationsView()
+                        }
                     }
                 }
             #endif
 
             // GPL-3.0: a modified version has to say what it came from, and the app says it here as well as in
-            // `README.md` (`LicencesView`). Not behind a debug flag and not only on macOS — it is the licence.
-            Section {
-                NavigationLink("Licences") {
-                    LicencesView()
+            // `README.md` (`LicencesView`). The owner sees it.
+            if isOwner {
+                Section {
+                    NavigationLink("Licences") {
+                        LicencesView()
+                    }
                 }
             }
         }

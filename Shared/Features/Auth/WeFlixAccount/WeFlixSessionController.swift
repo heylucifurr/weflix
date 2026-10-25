@@ -139,6 +139,21 @@ final class WeFlixSessionController {
         return ""
     }
 
+    /// Is the signed-in account WeFlix's **owner**?
+    ///
+    /// `GET /api/app/me`'s own answer (`user.isOwner`), never a client-side guess, and the flag Settings reads to
+    /// decide what a friend sees: **the interface section, the integrations section and the licence notice** belong
+    /// to whoever runs the server (Luther, 2026-10-25 — *"for non admin account … can you hide in the settings
+    /// Interface, and the whole intergration, Licenses"*). False while signed out, so nothing extra is ever
+    /// revealed by a screen reached before a sign-in completes.
+    var isOwner: Bool {
+        if case let .signedIn(user) = status {
+            return user.isOwner
+        }
+
+        return false
+    }
+
     /// Ask the server, once, what this account's requests are — after a sign-in and after a "try again".
     ///
     /// `requests = nil` on a refusal, which the requests screen reads as "not set up for your account" rather

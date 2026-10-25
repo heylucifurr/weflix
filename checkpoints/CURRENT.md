@@ -1,3 +1,27 @@
+## FIX — Settings for a friend: no Interface section, no Integrations, no licence row (2026-10-25, Cline)
+
+**Luther:** *"for non admin account. in the profile when you click it. can you hide in the settings Interface, and the
+whole intergration, Licenses"*
+
+- **`WeFlixSessionController.isOwner`** — `GET /api/app/me`'s own `user.isOwner`, exposed on the controller the gate
+  already hands down. It has to come from the server: the proxy grants a friend no admin bit at all, so there is
+  nothing to infer from permissions.
+- **`SettingsView`**, for a **non-owner**: the **Interface** row is gone, the **Integrations** section is gone (both
+  the macOS row and the iPhone section), and the **Licences** row is gone. What stays: My account, Playback, Audio,
+  Subtitles, Downloads, Storage.
+
+**Flagged — the licence row is the one thing here I would push back on.** It is one of the two places the GPL-3.0
+notice lives (the other is `README.md`), and `docs/PROJECT.md` §6 records both as *part of the deliverable, not
+decoration*. Hidden from a friend, the notice is no longer in what **they** see in the app. It is implemented as
+asked; keeping it visible to everybody is a one-`if` change, and `README.md`/`LICENSE` are untouched either way, so
+the distribution still carries the licence.
+
+**Not covered:** tvOS's own settings screen (`weflix-tvOS/Features/Settings/SettingsNavigation.swift` filters only
+accounts and profiles). The ask was the iPhone profile menu; say the word and tvOS follows.
+
+**Gate:** iOS · tvOS · macOS **BUILD SUCCEEDED**, 0 errors; `xcodebuild test` **TEST SUCCEEDED**.
+
+
 ## FIX — Discover: a title already asked for says so, and a title the library holds plays (2026-10-25, Cline)
 
 **Luther:** *"ON THE DISCOVER, i click on movie i requested.. but i still see Request Button. this will confuse
