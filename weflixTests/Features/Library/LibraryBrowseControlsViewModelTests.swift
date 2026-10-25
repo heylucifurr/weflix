@@ -141,12 +141,91 @@ struct LibraryBrowseControlsViewModelTests {
         #expect(!makeControls(restoring: nil).isFolderDisplayType)
     }
 
+    @Test func `the technical filters are not offered, and the rest still are`() throws {
+        let controls = makeControls(restoring: nil)
+        try controls.applyMeta(meta(addingFilters: [
+            ("decade", "Decade"),
+            ("resolution", "Resolution"),
+            ("hdr", "HDR"),
+            ("hdr10", "HDR10"),
+            ("dovi", "DoVi"),
+            ("atmos", "ATMOS"),
+            ("videoCodec", "Video Codec"),
+            ("audioCodec", "Audio Codec"),
+            ("subtitleCodec", "Subtitle Codec"),
+            ("audioLayout", "Audio Layout"),
+            ("audioLanguage", "Audio Language"),
+            ("editionTitle", "Edition"),
+            ("label", "Labels"),
+            ("location", "Folder Location"),
+        ]))
+
+        // Luther's list, gone from the menu (2026-10-25) …
+        #expect(controls.visibleFilters.map(\.filter) == ["unwatched", "genre"])
+        // … while Plex still reported every one of them, and the pill still has something to open.
+        #expect(controls.availableFilters.count == 16)
+        #expect(controls.showsFilterPill)
+    }
+
+    @Test func `a hidden filter is caught by its key or by its title`() throws {
+        // `videoCodec` is hidden by the key Plex sends; `someKey` titled `Decade` by the title it draws. Either
+        // spelling of "which filter is this" is enough, so a Plex that renames one of them does not bring it back.
+        let controls = makeControls(restoring: nil)
+        try controls.applyMeta(meta(addingFilters: [("videoCodec", "Video Codec"), ("someKey", "Decade")]))
+
+        #expect(controls.visibleFilters.map(\.filter) == ["unwatched", "genre"])
+    }
+
+    @Test func `Plex's folder display type is not offered either`() throws {
+        let controls = makeControls(restoring: nil)
+        try controls.applyMeta(meta(addingTypes: ["/library/sections/1/folder"]))
+
+        // It is the type that shows the file tree, and the tree is gone — so it is not in the menu …
+        #expect(controls.displayTypes.map(\.key) == [movieTypeKey, "/library/sections/1/all?type=18"])
+        #expect(controls.selectedDisplayType?.key == movieTypeKey)
+        // … and a saved selection pointing at it falls back to the library's own active type.
+        let restored = makeControls(restoring: PlexSelection(displayTypeKey: "/library/sections/1/folder"))
+        #expect(try restored.applyMeta(meta(addingTypes: ["/library/sections/1/folder"])))
+        #expect(restored.selectedDisplayType?.key == movieTypeKey)
+    }
+
     private func makeControls(restoring selection: PlexSelection?) -> LibraryBrowseControlsViewModel {
         LibraryBrowseControlsViewModel(advancedService: nil, pendingRestore: selection)
     }
 
     private func meta() throws -> PlexSectionItemMeta {
         try Fixtures.decode(PlexSectionItemMeta.self, from: "plex-section-meta")
+    }
+
+    /// The section-meta fixture with extra display types appended, in Plex's own shape.
+    private func meta(addingTypes keys: [String]) throws -> PlexSectionItemMeta {
+        var root = try JSONSerialization.jsonObject(with: Fixtures.data("plex-section-meta")) as? [String: Any] ?? [:]
+        var types = root["Type"] as? [[String: Any]] ?? []
+        types += keys.map { key in
+            ["key": key, "type": "movie", "title": "Folder", "active": false] as [String: Any]
+        }
+        root["Type"] = types
+
+        return try JSONDecoder().decode(PlexSectionItemMeta.self, from: JSONSerialization.data(withJSONObject: root))
+    }
+
+    /// The section-meta fixture with extra filters pushed into its movie type, in Plex's own shape.
+    private func meta(addingFilters extra: [(filter: String, title: String)]) throws -> PlexSectionItemMeta {
+        var root = try JSONSerialization.jsonObject(with: Fixtures.data("plex-section-meta")) as? [String: Any] ?? [:]
+        var types = root["Type"] as? [[String: Any]] ?? []
+        let added: [[String: Any]] = extra.map { entry in
+            [
+                "filter": entry.filter,
+                "filterType": "string",
+                "key": "/library/sections/1/\(entry.filter)",
+                "title": entry.title,
+                "type": "filter",
+            ]
+        }
+        types[0]["Filter"] = (types[0]["Filter"] as? [[String: Any]] ?? []) + added
+        root["Type"] = types
+
+        return try JSONDecoder().decode(PlexSectionItemMeta.self, from: JSONSerialization.data(withJSONObject: root))
     }
 
     private func queryItems(_ controls: LibraryBrowseControlsViewModel, includeMeta: Bool = true) -> [String: String] {

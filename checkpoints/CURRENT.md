@@ -1,3 +1,29 @@
+## FIX — the type pill now shows it is on, the Folder pill is gone, and the technical filters are hidden (2026-10-25, Cline)
+
+Three things from Luther, all about the library row:
+
+| What he said | What changed |
+|---|---|
+| *"if you tap Movies it gets activated right? but it looks like it doesnt as it doesnt have White BG"* | He is right: the type pill was drawn `isSelected: false` always, so tapping it looked like nothing happened. It now wears the white active capsule while the **grid** is on screen — `isTypePillSelected: selectedTab == .browse` on the two detail screens, and `true` on a standalone browse, where the grid *is* the screen. Exactly what `Recommended` does on the rails. |
+| *"remove the the list the 'Folder' i dont need that"* | **Both** things called `Folder` are gone: the folder-tree pill is out of the row (all five call sites), and Plex's own `Folder` **display type** is dropped in `applyMeta` — it is the type that *shows* the file tree, so with the tree gone it would draw nothing the grid does not. Dropping it there means it cannot be listed, selected, or restored from a saved selection. `showsFolderTree` is no longer read from preferences either, so a saved `true` cannot put a tree on screen with no pill left to leave it. `FolderTreeModel` and its tests stay. |
+| *"on the filter remove some of it.. Decade Resolution HDR DOVI HDR10 ATMOS video codec audio codec subtitle codec audio layout audio language edition labels folder location"* | Plex's technical tail is hidden from the `Filter` menu via `visibleFilters` — matched on the filter's **key or its title**, lower-cased and de-spaced, so `videoCodec` and `Video Codec` are the same filter. `availableFilters` still holds Plex's full list, so `showsFilterPill` and `hasActiveFilter` cannot lie about what is applied. |
+
+The row on a library screen is now:
+
+```
+Recommended   Movies(▾)   Filter(▾)   Sort(▾)   🔳
+                 ^ white while you are in the grid       ^ Folder is gone
+```
+
+**Gate:** iOS · tvOS · macOS **BUILD SUCCEEDED**, 0 errors (`weflix-tvOS` needed `ARCHS=arm64` — the prebuilt `libdovi.a`,
+DTSX and TrueHD are arm64-only, so a generic destination that picks `x86_64` cannot link; nothing to do with this
+change). **`xcodebuild test` — TEST SUCCEEDED, 428 passed** (up from 425 by the three new tests):
+`the technical filters are not offered, and the rest still are` (the fourteen names are absent from `visibleFilters`
+while `availableFilters` still counts every one Plex sent), `a hidden filter is caught by its key or by its title`,
+and `Plex's folder display type is not offered either` (not in the menu, and a saved selection on it falls back to
+the library's active type).
+
+
 ## FIX — the filter chips I never should have added; pills restored, as menus (2026-10-25, Cline)
 
 **Luther:** *"why there are a lot of filter types you added i did not asked for????? WTF???"*

@@ -18,11 +18,6 @@ struct LibraryBrowseView: View {
         )
     }
 
-    private var folderTreeToggle: LibraryBrowseToggle? {
-        guard viewModel.canShowFolderTree else { return nil }
-        return .folderTree(isSelected: viewModel.showsFolderTree, action: viewModel.toggleFolderTree)
-    }
-
     @ViewBuilder
     private func browseItems(cardWidth: CGFloat? = nil) -> some View {
         ForEach(Array(viewModel.browseItems.enumerated()), id: \.element.id) { index, item in
@@ -78,11 +73,8 @@ struct LibraryBrowseView: View {
                         onNavigateBack: viewModel.navigateBack,
                         leadingToggle: downloadedOnlyToggle,
                         showsServerControls: viewModel.showsServerControls,
-                        folderTreeToggle: folderTreeToggle,
-                        layoutToggle: viewModel.folderTree == nil
-                            ? .layout(current: viewModel.layout, onChange: viewModel.setLayout)
-                            : nil,
-                        itemCount: viewModel.folderTree == nil ? viewModel.totalCount : nil,
+                        layoutToggle: .layout(current: viewModel.layout, onChange: viewModel.setLayout),
+                        itemCount: viewModel.totalCount,
                         showsTopRow: showsControlsRow,
                     )
                     .padding(.horizontal, 16)

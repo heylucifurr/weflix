@@ -49,9 +49,10 @@ struct LibraryBrowseControlsView: View {
     let onNavigateBack: () -> Void
     let leadingToggle: LibraryBrowseToggle?
     let showsServerControls: Bool
-    let folderTreeToggle: LibraryBrowseToggle?
     /// Icon-only toggle shown last in the controls row; its title is used as the accessibility label.
     let layoutToggle: LibraryBrowseToggle?
+    /// Whether the grid is on screen, so the type pill can wear the white active capsule (2026-10-25).
+    let isTypePillSelected: Bool
     let itemCount: Int?
     /// `false` when the caller renders `pills` itself in another row — the library detail screen does exactly
     /// that, so the pills and the tab chips are one line (2026-10-25).
@@ -63,8 +64,8 @@ struct LibraryBrowseControlsView: View {
         onNavigateBack: @escaping () -> Void = {},
         leadingToggle: LibraryBrowseToggle? = nil,
         showsServerControls: Bool = true,
-        folderTreeToggle: LibraryBrowseToggle? = nil,
         layoutToggle: LibraryBrowseToggle? = nil,
+        isTypePillSelected: Bool = true,
         itemCount: Int? = nil,
         showsTopRow: Bool = true,
     ) {
@@ -73,8 +74,8 @@ struct LibraryBrowseControlsView: View {
         self.onNavigateBack = onNavigateBack
         self.leadingToggle = leadingToggle
         self.showsServerControls = showsServerControls
-        self.folderTreeToggle = folderTreeToggle
         self.layoutToggle = layoutToggle
+        self.isTypePillSelected = isTypePillSelected
         self.itemCount = itemCount
         self.showsTopRow = showsTopRow
     }
@@ -119,7 +120,7 @@ struct LibraryBrowseControlsView: View {
             onNavigateBack: onNavigateBack,
             leadingToggle: leadingToggle,
             showsServerControls: showsServerControls,
-            folderTreeToggle: folderTreeToggle,
+            isTypePillSelected: isTypePillSelected,
             layoutToggle: layoutToggle,
         )
     }
@@ -145,7 +146,12 @@ struct LibraryBrowsePillsRow: View {
     let onNavigateBack: () -> Void
     let leadingToggle: LibraryBrowseToggle?
     let showsServerControls: Bool
-    let folderTreeToggle: LibraryBrowseToggle?
+    /// Whether the **grid** is what is on screen.
+    ///
+    /// The type pill wears the white "active" capsule when it is (Luther, 2026-10-25: *"if you tap Movies it gets
+    /// activated right? but it looks like it doesnt as it doesnt have White BG"*) — tapping it is what put the grid
+    /// there, so it has to look like the mode that is on, exactly as `Recommended` does on the rails.
+    let isTypePillSelected: Bool
     let layoutToggle: LibraryBrowseToggle?
 
     var body: some View {
@@ -161,15 +167,6 @@ struct LibraryBrowsePillsRow: View {
             }
             if showsServerControls {
                 serverPills
-            }
-            if let folderTreeToggle {
-                LibraryBrowsePillButton(
-                    title: folderTreeToggle.title,
-                    systemImage: folderTreeToggle.systemImage,
-                    isSelected: folderTreeToggle.isSelected,
-                    showsDisclosure: false,
-                    action: folderTreeToggle.action,
-                )
             }
             if let layoutToggle {
                 LibraryBrowsePillButton(
@@ -212,7 +209,7 @@ struct LibraryBrowsePillsRow: View {
                 LibraryBrowsePillLabel(
                     title: viewModel.typePillTitle,
                     systemImage: "square.grid.2x2",
-                    isSelected: false,
+                    isSelected: isTypePillSelected,
                     showsDisclosure: true,
                 )
             }
@@ -244,7 +241,7 @@ struct LibraryBrowsePillsRow: View {
                         }
                     }
                 } else {
-                    ForEach(viewModel.availableFilters, id: \.filter) { filter in
+                    ForEach(viewModel.visibleFilters, id: \.filter) { filter in
                         let selection = viewModel.filterSelection(for: filter)
 
                         Button {

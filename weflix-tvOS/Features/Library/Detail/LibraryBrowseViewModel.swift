@@ -64,7 +64,8 @@ final class LibraryBrowseViewModel {
             for: library.type,
             defaultLayout: settingsManager.interface.libraryDefaultLayout,
         )
-        showsFolderTree = preferences.showsFolderTree ?? false
+        // The **folder tree is no longer offered** (Luther, 2026-10-25: *"remove the Folder i dont need that"*).
+        showsFolderTree = false
         browseSession.restoreQueryIfNeeded(preferences.jellyfinQuery)
         controls = LibraryBrowseControlsViewModel(
             advancedService: services.library as? any PlexAdvancedLibraryService,

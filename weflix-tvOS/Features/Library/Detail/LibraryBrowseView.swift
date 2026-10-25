@@ -17,11 +17,6 @@ struct LibraryBrowseView: View {
         self.onSelectMedia = onSelectMedia
     }
 
-    private var folderTreeToggle: LibraryBrowseToggle? {
-        guard viewModel.canShowFolderTree else { return nil }
-        return .folderTree(isSelected: viewModel.showsFolderTree, action: viewModel.toggleFolderTree)
-    }
-
     var body: some View {
         @Bindable var controls = viewModel.controls
 
@@ -37,11 +32,8 @@ struct LibraryBrowseView: View {
                             viewModel: controls,
                             showsBackButton: viewModel.canNavigateBack,
                             onNavigateBack: viewModel.navigateBack,
-                            folderTreeToggle: folderTreeToggle,
-                            layoutToggle: viewModel.folderTree == nil
-                                ? .layout(current: viewModel.layout, onChange: viewModel.setLayout)
-                                : nil,
-                            itemCount: viewModel.folderTree == nil ? viewModel.totalItemCount : nil,
+                            layoutToggle: .layout(current: viewModel.layout, onChange: viewModel.setLayout),
+                            itemCount: viewModel.totalItemCount,
                         )
 
                         if let folderTree = viewModel.folderTree {

@@ -124,13 +124,11 @@ struct LibraryDetailView: View {
                     onNavigateBack: model.navigateBack,
                     leadingToggle: leadingToggle(for: model),
                     showsServerControls: model.showsServerControls,
-                    folderTreeToggle: folderTreeToggle(for: model),
-                    layoutToggle: model.folderTree == nil
-                        ? .layout(current: model.layout) { layout in
-                            model.setLayout(layout)
-                            showBrowse()
-                        }
-                        : nil,
+                    isTypePillSelected: selectedTab == .browse,
+                    layoutToggle: .layout(current: model.layout) { layout in
+                        model.setLayout(layout)
+                        showBrowse()
+                    },
                 )
             }
             .padding(.horizontal, 16)
@@ -164,13 +162,5 @@ struct LibraryDetailView: View {
                 showBrowse()
             },
         )
-    }
-
-    private func folderTreeToggle(for model: LibraryBrowseViewModel) -> LibraryBrowseToggle? {
-        guard model.canShowFolderTree else { return nil }
-        return .folderTree(isSelected: model.showsFolderTree) {
-            model.toggleFolderTree()
-            showBrowse()
-        }
     }
 }

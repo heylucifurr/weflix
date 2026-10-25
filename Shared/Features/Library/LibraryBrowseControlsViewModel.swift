@@ -169,7 +169,12 @@ final class LibraryBrowseControlsViewModel {
 
     /// Plex lists a library's file tree under its `folder` display type.
     var isFolderDisplayType: Bool {
-        requestedDisplayTypeKey.flatMap(PlexEndpoint.init(key:))?.path.hasSuffix("/folder") == true
+        requestedDisplayTypeKey.map(Self.isFolderDisplayTypeKey) ?? false
+    }
+
+    /// Whether a display type's own key is Plex's `folder` view — the one that is not offered.
+    private static func isFolderDisplayTypeKey(_ key: String) -> Bool {
+        PlexEndpoint(key: key)?.path.hasSuffix("/folder") == true
     }
 
     var plexSelection: LibraryBrowsePreferences.PlexSelection {
@@ -211,12 +216,39 @@ final class LibraryBrowseControlsViewModel {
         selectedDisplayType?.filters ?? []
     }
 
+    /// The filters **not offered** (Luther, 2026-10-25).
+    ///
+    /// Plex reports a long technical tail for a movie section — `Decade`, `Resolution`, `HDR`, `DoVi`, `HDR10`,
+    /// `ATMOS`, `Video Codec`, `Audio Codec`, `Subtitle Codec`, `Audio Layout`, `Audio Language`, `Edition`,
+    /// `Labels`, `Folder Location` — and none of it is how anybody picks something to watch. Matched on the
+    /// filter's own key **or** its title, lower-cased and de-spaced, so either spelling catches it.
+    ///
+    /// A hidden filter is simply not in the menu, so it can never be switched on.
+    private static let hiddenFilterNames: Set<String> = [
+        "decade", "resolution", "hdr", "hdr10", "dovi", "dolbyvision", "atmos",
+        "videocodec", "audiocodec", "subtitlecodec", "audiolayout", "audiolanguage",
+        "edition", "editiontitle", "label", "labels", "location", "folderlocation", "folder",
+    ]
+
+    /// The filters the `Filter` menu offers: Plex's list, minus the technical tail above.
+    var visibleFilters: [PlexSectionItemFilter] {
+        availableFilters.filter { filter in
+            !Self.hiddenFilterNames.contains(Self.normalizedFilterName(filter.filter))
+                && !Self.hiddenFilterNames.contains(Self.normalizedFilterName(filter.title))
+        }
+    }
+
+    /// `"Video Codec"` → `"videocodec"`, so a key and a title are compared the same way.
+    private static func normalizedFilterName(_ value: String) -> String {
+        value.lowercased().replacingOccurrences(of: " ", with: "").replacingOccurrences(of: "_", with: "")
+    }
+
     var availableSorts: [PlexSectionItemSort] {
         selectedDisplayType?.sorts ?? []
     }
 
     var showsFilterPill: Bool {
-        isJellyfinBrowse || !availableFilters.isEmpty
+        isJellyfinBrowse || !visibleFilters.isEmpty
     }
 
     var showsSortPill: Bool {
@@ -527,7 +559,11 @@ final class LibraryBrowseControlsViewModel {
     /// so the caller can refresh and save the cleaned selection.
     @discardableResult
     func applyMeta(_ meta: PlexSectionItemMeta) -> Bool {
-        let types = meta.type.map(DisplayType.init)
+        // Plex's own `Folder` display type is not offered (Luther, 2026-10-25: *"remove the the list the 'Folder'
+        // i dont need that"*). It is also the type that shows the library's file tree, and the tree is gone, so
+        // leaving it in would be a type that draws nothing the grid does not. Dropped here, at the source, so it
+        // cannot be listed, selected, or restored from a saved selection either.
+        let types = meta.type.map(DisplayType.init).filter { !Self.isFolderDisplayTypeKey($0.key) }
         displayTypes = types
         let restore = pendingRestore
         pendingRestore = nil
