@@ -60,6 +60,13 @@ enum WeFlixServer {
     /// `POST` — a short-lived ticket for the **player**'s media URLs, which cannot carry a header (S5).
     static let streamTicketPath = "api/app/stream-ticket"
 
+    /// `POST` — the app's **playback report**, the one the server actually reads (2026-10-25).
+    ///
+    /// It is what puts a playback from this app on Admin → Now Playing and what saves its resume point and watched
+    /// mark; without it an app playback was invisible there and saved no progress at all. Measured from the web
+    /// player, which is the other caller of the same route.
+    static let playbackHeartbeatPath = "api/playback/heartbeat"
+
     /// `GET` — the signed-in account's **My Watchlist**, from WeFlix's own database (2026-10-25).
     ///
     /// The list is the account's own `watchlist_entries` rows; the web reads the same store through

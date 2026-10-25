@@ -186,21 +186,19 @@ struct LibraryDetailView: View {
         240 + 48 + 12 + 48
     }
 
+    /// The switcher's entries: `Recommended` and `Browse`, and **never** Collections or Playlists.
+    ///
+    /// Those two were removed from the library screen's switcher on 2026-10-25 (Luther: *"Remove Collection and
+    /// Playlist"*); they keep their other doors — the Libraries screen lists them and the home rails carry them.
+    ///
+    /// **Why Browse stays here but not on iOS/macOS:** tvOS's switcher is a focus **sidebar** beside the content,
+    /// not a chip row above it, so the filter pills cannot sit in it. It is also tvOS's only way into the grid, so
+    /// removing Browse would strand it. iOS and macOS are the one-row design
+    /// (`Recommended · Movies · Filter · Sort · 🔳`, the pills being the way in).
     private var availableTabs: [LibraryDetailTab] {
-        if mediaServices.provider == .jellyfin {
-            return library.type == .collection || library.type == .playlist
-                ? [.browse]
-                : [.recommended, .browse]
+        if library.type == .collection || library.type == .playlist {
+            return [.browse]
         }
-        return LibraryDetailTab.allCases.filter { tab in
-            switch tab {
-            case .collections:
-                settingsManager.interface.displayCollections
-            case .playlists:
-                settingsManager.interface.displayPlaylists
-            default:
-                true
-            }
-        }
+        return [.recommended, .browse]
     }
 }

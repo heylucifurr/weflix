@@ -53,6 +53,9 @@ struct LibraryBrowseControlsView: View {
     /// Icon-only toggle shown last in the controls row; its title is used as the accessibility label.
     let layoutToggle: LibraryBrowseToggle?
     let itemCount: Int?
+    /// `false` when the caller renders `pills` itself in another row — the library detail screen does exactly
+    /// that, so the pills and the tab chips are one line (2026-10-25).
+    let showsTopRow: Bool
 
     init(
         viewModel: LibraryBrowseControlsViewModel,
@@ -63,6 +66,7 @@ struct LibraryBrowseControlsView: View {
         folderTreeToggle: LibraryBrowseToggle? = nil,
         layoutToggle: LibraryBrowseToggle? = nil,
         itemCount: Int? = nil,
+        showsTopRow: Bool = true,
     ) {
         self.viewModel = viewModel
         self.showsBackButton = showsBackButton
@@ -72,11 +76,14 @@ struct LibraryBrowseControlsView: View {
         self.folderTreeToggle = folderTreeToggle
         self.layoutToggle = layoutToggle
         self.itemCount = itemCount
+        self.showsTopRow = showsTopRow
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            topRow
+            if showsTopRow {
+                topRow
+            }
 
             if showsServerControls, let panel = viewModel.activePanel {
                 optionsRow(for: panel)
@@ -99,97 +106,26 @@ struct LibraryBrowseControlsView: View {
 
     private var topRow: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: LayoutMetrics.chipSpacing) {
-                if let leadingToggle {
-                    LibraryBrowsePillButton(
-                        title: leadingToggle.title,
-                        systemImage: leadingToggle.systemImage,
-                        isSelected: leadingToggle.isSelected,
-                        showsDisclosure: false,
-                        action: leadingToggle.action,
-                    )
-                }
-                if showsServerControls {
-                    serverPills
-                }
-                if let folderTreeToggle {
-                    LibraryBrowsePillButton(
-                        title: folderTreeToggle.title,
-                        systemImage: folderTreeToggle.systemImage,
-                        isSelected: folderTreeToggle.isSelected,
-                        showsDisclosure: false,
-                        action: folderTreeToggle.action,
-                    )
-                }
-                if let layoutToggle {
-                    LibraryBrowsePillButton(
-                        title: layoutToggle.title,
-                        systemImage: layoutToggle.systemImage,
-                        isSelected: layoutToggle.isSelected,
-                        showsDisclosure: false,
-                        showsTitle: false,
-                        action: layoutToggle.action,
-                    )
-                }
-            }
-            .padding(rowPadding)
+            pills
+                .padding(rowPadding)
         }
         .mouseDragScrolling()
     }
 
-    @ViewBuilder
-    private var serverPills: some View {
-        if showsBackButton {
-            LibraryBrowsePillButton(
-                title: String(localized: "library.browse.folders.back"),
-                systemImage: "chevron.left",
-                isSelected: false,
-                showsDisclosure: false,
-                action: onNavigateBack,
-            )
-        }
-        if viewModel.hasDisplayTypes {
-            LibraryBrowsePillButton(
-                title: viewModel.typePillTitle,
-                systemImage: "square.grid.2x2",
-                isSelected: viewModel.activePanel == .type,
-                showsDisclosure: true,
-            ) {
-                viewModel.togglePanel(.type)
-            }
-        }
-
-        if viewModel.showsFilterPill {
-            LibraryBrowsePillButton(
-                title: viewModel.filterPillTitle,
-                systemImage: "line.3.horizontal.decrease.circle",
-                isSelected: viewModel.activePanel == .filters,
-                showsDisclosure: true,
-            ) {
-                viewModel.togglePanel(.filters)
-            }
-        }
-
-        if viewModel.showsSortPill {
-            LibraryBrowsePillButton(
-                title: viewModel.sortPillTitle,
-                systemImage: "arrow.up.arrow.down.circle",
-                isSelected: viewModel.activePanel == .sort,
-                showsDisclosure: true,
-            ) {
-                viewModel.togglePanel(.sort)
-            }
-        }
-
-        if viewModel.canResetSelection {
-            LibraryBrowsePillButton(
-                title: String(localized: "library.browse.filters.reset"),
-                systemImage: "arrow.counterclockwise",
-                isSelected: false,
-                showsDisclosure: false,
-                action: viewModel.resetSelection,
-            )
-        }
+    /// The filter pills themselves, without a scroll view or padding of their own.
+    ///
+    /// `LibraryDetailView` embeds this in the **tab picker's** row, which is what makes the library screen one row
+    /// instead of two (Luther, 2026-10-25): `Recommended · Movies · Filter · Sort · 🔳`.
+    var pills: some View {
+        LibraryBrowsePillsRow(
+            viewModel: viewModel,
+            showsBackButton: showsBackButton,
+            onNavigateBack: onNavigateBack,
+            leadingToggle: leadingToggle,
+            showsServerControls: showsServerControls,
+            folderTreeToggle: folderTreeToggle,
+            layoutToggle: layoutToggle,
+        )
     }
 
     @ViewBuilder
@@ -326,6 +262,114 @@ struct LibraryBrowseControlsView: View {
         #endif
     }
 }
+
+/// The filter pills on their own — the type pill, Filter, Sort and the reset — with **no** scroll view and no
+/// padding, so a caller can put them in a row it already has.
+///
+/// The library detail screen is that caller: its tab chips and these pills are one horizontally scrolling row,
+/// which is the "1 combined filter" Luther asked for on 2026-10-25 (`Recommended · Movies · Filter · Sort · 🔳`,
+/// with `Recommended` the way back to the rails and the pills the way into the grid).
+struct LibraryBrowsePillsRow: View {
+    @Bindable var viewModel: LibraryBrowseControlsViewModel
+    let showsBackButton: Bool
+    let onNavigateBack: () -> Void
+    let leadingToggle: LibraryBrowseToggle?
+    let showsServerControls: Bool
+    let folderTreeToggle: LibraryBrowseToggle?
+    let layoutToggle: LibraryBrowseToggle?
+
+    var body: some View {
+        HStack(spacing: LayoutMetrics.chipSpacing) {
+            if let leadingToggle {
+                LibraryBrowsePillButton(
+                    title: leadingToggle.title,
+                    systemImage: leadingToggle.systemImage,
+                    isSelected: leadingToggle.isSelected,
+                    showsDisclosure: false,
+                    action: leadingToggle.action,
+                )
+            }
+            if showsServerControls {
+                serverPills
+            }
+            if let folderTreeToggle {
+                LibraryBrowsePillButton(
+                    title: folderTreeToggle.title,
+                    systemImage: folderTreeToggle.systemImage,
+                    isSelected: folderTreeToggle.isSelected,
+                    showsDisclosure: false,
+                    action: folderTreeToggle.action,
+                )
+            }
+            if let layoutToggle {
+                LibraryBrowsePillButton(
+                    title: layoutToggle.title,
+                    systemImage: layoutToggle.systemImage,
+                    isSelected: layoutToggle.isSelected,
+                    showsDisclosure: false,
+                    showsTitle: false,
+                    action: layoutToggle.action,
+                )
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var serverPills: some View {
+        if showsBackButton {
+            LibraryBrowsePillButton(
+                title: String(localized: "library.browse.folders.back"),
+                systemImage: "chevron.left",
+                isSelected: false,
+                showsDisclosure: false,
+                action: onNavigateBack,
+            )
+        }
+        if viewModel.hasDisplayTypes {
+            LibraryBrowsePillButton(
+                title: viewModel.typePillTitle,
+                systemImage: "square.grid.2x2",
+                isSelected: viewModel.activePanel == .type,
+                showsDisclosure: true,
+            ) {
+                viewModel.togglePanel(.type)
+            }
+        }
+
+        if viewModel.showsFilterPill {
+            LibraryBrowsePillButton(
+                title: viewModel.filterPillTitle,
+                systemImage: "line.3.horizontal.decrease.circle",
+                isSelected: viewModel.activePanel == .filters,
+                showsDisclosure: true,
+            ) {
+                viewModel.togglePanel(.filters)
+            }
+        }
+
+        if viewModel.showsSortPill {
+            LibraryBrowsePillButton(
+                title: viewModel.sortPillTitle,
+                systemImage: "arrow.up.arrow.down.circle",
+                isSelected: viewModel.activePanel == .sort,
+                showsDisclosure: true,
+            ) {
+                viewModel.togglePanel(.sort)
+            }
+        }
+
+        if viewModel.canResetSelection {
+            LibraryBrowsePillButton(
+                title: String(localized: "library.browse.filters.reset"),
+                systemImage: "arrow.counterclockwise",
+                isSelected: false,
+                showsDisclosure: false,
+                action: viewModel.resetSelection,
+            )
+        }
+    }
+}
+
 
 private struct LibraryBrowsePillButton: View {
     let title: String

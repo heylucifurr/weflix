@@ -1162,6 +1162,34 @@ final class PlexMediaServiceAdapter: MediaHomeService, MediaLibraryService, Medi
         position: TimeInterval,
         state: PlaybackRepository.PlaybackState,
     ) async throws {
+        /*
+         * PHASE APP-GATEWAY (playback tracking) — on a WeFlix gateway server the report is **WeFlix's own
+         * heartbeat**, not Plex's `/:/timeline`.
+         *
+         * The server owns the session now: `POST /api/playback/heartbeat` writes the `playback_sessions` row
+         * Admin → Now Playing reads *and* the `watch_progress` row resume and the watched mark come from, and the
+         * server writes **nothing** to `/:/timeline` any more. This app kept the old call, which the gateway also
+         * refuses — so an app playback was invisible on the dashboard and saved no progress at all
+         * (Luther, 2026-10-25: *"anyone uses app is not tracking"*).
+         *
+         * A server with a Plex token of its own keeps the timeline path it has always had.
+         */
+        if let snapshot = try? context.serverAccessSnapshot(), snapshot.speaksToGateway {
+            try await WeFlixPlaybackHeartbeat.send(
+                WeFlixPlaybackHeartbeat.Report(
+                    ratingKey: plan.media.id,
+                    positionMilliseconds: max(0, Int(position * 1000)),
+                    durationMilliseconds: max(0, Int((plan.media.duration ?? 0) * 1000)),
+                    state: Self.heartbeatState(for: state),
+                    itemGuid: plan.media.guid,
+                    // The key only when the URL really is a transcode: a direct play opens no Plex session.
+                    playMode: plan.method == .transcode ? "transcode" : "direct",
+                    transcodeSessionKey: plan.method == .transcode ? plan.transcodeSessionID : nil,
+                ),
+            )
+            return
+        }
+
         _ = try await PlaybackRepository(context: context).updateTimeline(
             ratingKey: plan.media.id,
             state: state,
@@ -1170,6 +1198,20 @@ final class PlexMediaServiceAdapter: MediaHomeService, MediaLibraryService, Medi
             sessionIdentifier: playbackSessionID,
             playQueueItemID: queueItemIDs[plan.media.id],
         )
+    }
+
+    /// Plex's four states onto the three the heartbeat accepts. Buffering is a playing stream that is waiting.
+    private static func heartbeatState(
+        for state: PlaybackRepository.PlaybackState,
+    ) -> WeFlixPlaybackHeartbeat.State {
+        switch state {
+        case .playing, .buffering:
+            .playing
+        case .paused:
+            .paused
+        case .stopped:
+            .stopped
+        }
     }
 
     private func parentSeries(for media: MediaItem) async throws -> MediaItem? {

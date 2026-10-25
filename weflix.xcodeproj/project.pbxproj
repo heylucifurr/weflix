@@ -134,6 +134,7 @@
 				Features/Auth/WeFlixAccount/WeFlixDeviceTokenStore.swift,
 				Features/Auth/WeFlixAccount/WeFlixGatewayAccount.swift,
 				Features/Auth/WeFlixAccount/WeFlixGatewayURL.swift,
+				Features/Auth/WeFlixAccount/WeFlixPlaybackHeartbeat.swift,
 				Features/Auth/WeFlixAccount/WeFlixSessionController.swift,
 				Features/Auth/WeFlixAccount/WeFlixSignedInView.swift,
 				Features/Auth/WeFlixAccount/WeFlixSignInView.swift,

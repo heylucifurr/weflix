@@ -4,6 +4,9 @@ struct LibraryBrowseView: View {
     @Environment(SettingsManager.self) private var settingsManager
     @State var viewModel: LibraryBrowseViewModel
     let onSelectMedia: (MediaDisplayItem) -> Void
+    /// `false` when the caller owns the filter row — `LibraryDetailView` does, so the pills live in its tab row
+    /// instead of a second line here (Luther, 2026-10-25).
+    var showsControlsRow: Bool = true
 
     private var downloadedOnlyToggle: LibraryBrowseToggle? {
         guard viewModel.showsDownloadedOnlyToggle else { return nil }
@@ -80,6 +83,7 @@ struct LibraryBrowseView: View {
                             ? .layout(current: viewModel.layout, onChange: viewModel.setLayout)
                             : nil,
                         itemCount: viewModel.folderTree == nil ? viewModel.totalCount : nil,
+                        showsTopRow: showsControlsRow,
                     )
                     .padding(.horizontal, 16)
 

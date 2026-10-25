@@ -37,16 +37,24 @@ enum LibraryDetailTab: String, CaseIterable, Hashable, Identifiable {
     }
 }
 
-struct LibraryDetailTabPicker: View {
+struct LibraryDetailTabPicker<Trailing: View>: View {
     @Binding private var selection: LibraryDetailTab
     let tabs: [LibraryDetailTab]
+    /// Sits after the chips **in the same row and the same scroll view**.
+    ///
+    /// This is what makes the library screen one row instead of two (Luther, 2026-10-25): the Browse tab's own
+    /// filter pills used to be a second line under this one, and Browse itself is gone as a chip — the pills are
+    /// how you get to the grid, and `Recommended` is how you get back to the rails.
+    @ViewBuilder private let trailing: () -> Trailing
 
     init(
         selection: Binding<LibraryDetailTab>,
         tabs: [LibraryDetailTab],
+        @ViewBuilder trailing: @escaping () -> Trailing,
     ) {
         _selection = selection
         self.tabs = tabs
+        self.trailing = trailing
     }
 
     var body: some View {
@@ -57,6 +65,8 @@ struct LibraryDetailTabPicker: View {
                         tabButton(for: tab)
                             .id(tab)
                     }
+
+                    trailing()
                 }
                 .padding(.horizontal, 2)
             }
@@ -76,5 +86,14 @@ struct LibraryDetailTabPicker: View {
                 selection = tab
             }
         }
+    }
+}
+
+extension LibraryDetailTabPicker where Trailing == EmptyView {
+    init(
+        selection: Binding<LibraryDetailTab>,
+        tabs: [LibraryDetailTab],
+    ) {
+        self.init(selection: selection, tabs: tabs) { EmptyView() }
     }
 }

@@ -125,6 +125,11 @@ final class LibraryBrowseControlsViewModel {
     @ObservationIgnored var onSelectionChanged: (() -> Void)?
     @ObservationIgnored var onDisplayTypeChanged: (() -> Void)?
     @ObservationIgnored var onSelectionReset: (() -> Void)?
+    /// Called whenever the person **uses** one of these pills — opening a panel, picking a type, resetting.
+    ///
+    /// The library detail screen sets this to move itself into the grid, because that screen has no Browse chip
+    /// any more: the pills *are* the way in (Luther, 2026-10-25).
+    @ObservationIgnored var onUserInteraction: (() -> Void)?
     /// Saved Plex selection used to build requests until `meta` confirms it against the server.
     @ObservationIgnored private var pendingRestore: LibraryBrowsePreferences.PlexSelection?
     @ObservationIgnored private let advancedService: (any PlexAdvancedLibraryService)?
@@ -283,6 +288,7 @@ final class LibraryBrowseControlsViewModel {
     }
 
     func togglePanel(_ panel: Panel) {
+        onUserInteraction?()
         if activePanel == panel {
             activePanel = nil
         } else {
@@ -291,6 +297,7 @@ final class LibraryBrowseControlsViewModel {
     }
 
     func selectDisplayType(_ type: DisplayType) {
+        onUserInteraction?()
         guard type.key != selectedDisplayType?.key else { return }
         selectedDisplayType = type
         normalizeSelections(for: type)
@@ -480,6 +487,7 @@ final class LibraryBrowseControlsViewModel {
     }
 
     func resetSelection() {
+        onUserInteraction?()
         if isJellyfinBrowse {
             browseSession?.query = LibraryBrowseQuery()
         } else {

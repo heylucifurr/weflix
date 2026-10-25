@@ -1,3 +1,67 @@
+## FEATURE — one filter row on the library screen, and the app's plays on the dashboard (2026-10-25, Cline)
+
+**Luther, two asks in one message.**
+
+### 1. *"1 combined filter — Recommended Movies Filter Sort and thumb"*
+
+The library screen had two rows: the tab chips (`Recommended · Browse · Collections · Playlists`) and, inside
+Browse, a second row of filter pills. He chose the exact result:
+
+> *"Drop Browse entirely: one row reads `Recommended | Movies | Filter | Sort | 🔳`, and tapping any of
+> Movies/Filter/Sort puts you in the grid; Recommended returns to the rails."*
+
+| File | What |
+|---|---|
+| `Shared/Features/Library/LibraryDetailTabPicker.swift` | Now generic over a **trailing** view, rendered after the chips **in the same `HStack` and the same `ScrollView`** — that is what makes one row. An `EmptyView` convenience init keeps the old call shape. |
+| `Shared/Features/Library/LibraryBrowseControlsView.swift` | The pills were extracted into `LibraryBrowsePillsRow` (same file, so no project edit), which renders them with no scroll view of its own; `showsTopRow: Bool` lets a caller that owns the row keep the pills out of a second one. |
+| `Shared/Features/Library/LibraryBrowseControlsViewModel.swift` | `onUserInteraction` — called when a pill is used (panel, type, reset). The detail screen uses it to move into the grid, which is what the removed Browse chip did. |
+| `weflix-iOS` / `weflix-macOS` `Features/Library/Detail/LibraryDetailView.swift` | Own the browse view model (`@State`, created on first appearance, because its dependencies are environment values), render the single row, and pass `showsControlsRow: false` down so the pills are not drawn twice. `tabChips` is `[.recommended]`, or `[]` for a collection/playlist library (no rails to recommend). |
+| `weflix-iOS` / `weflix-macOS` `…/LibraryBrowseView.swift` | `showsControlsRow` (default `true`) → `showsTopRow`. |
+| `weflix-tvOS/…/LibraryDetailView.swift` | **Only** Collections and Playlists were removed. Browse stays: tvOS's switcher is a focus **sidebar** beside the content, not a chip row above it, so the pills cannot sit in it and it is tvOS's only way into the grid. **Not done on tvOS: the one-row merge** — that is a different layout, and it is recorded here rather than half-built. |
+
+**Collections and Playlists are not orphaned** — the Libraries screen lists them (`LibraryViewModel`) and the home
+rails carry them; only their chips on this screen are gone, as asked.
+
+### 2. *"anyone uses app is not tracking"* — the dashboard
+
+Read from the server, not guessed. Admin → Now Playing has **two** halves: Plex's `/status/sessions`, and WeFlix's
+own `playback_sessions` rows, which **`POST /api/playback/heartbeat`** writes — the web player's own report. This
+app never called it: it reported to Plex's `/:/timeline`, which **the server stopped writing** (*"nothing at all is
+written to `/:/timeline` or `/:/scrobble`"*) *and* which the gateway refuses. So an app playback was invisible on
+the dashboard **and saved no progress at all** — the `watch_progress` row that resume and the watched mark come
+from is written by that same heartbeat.
+
+| File | What |
+|---|---|
+| `Shared/Features/Auth/WeFlixAccount/WeFlixPlaybackHeartbeat.swift` | **New.** `POST api/playback/heartbeat` with the device bearer token: rating key, **milliseconds**, state, `playMode`, the live transcode's key, and the item's GUID when there is one. `body(for:)` is pure so a test pins every field. A refusal is thrown with the server's own sentence (`409` = the stream limit). **Named in the tvOS `Shared` allow-list**; verified by `WeFlixPlaybackHeartbeat.o` in the tvOS build's intermediates. |
+| `Shared/Config/WeFlixServer.swift` | `playbackHeartbeatPath`. |
+| `Shared/Providers/Plex/PlexMediaServices.swift` | `report(plan:position:state:)` — the **one** funnel behind `reportStarted`/`reportProgress`/`reportStopped` — sends the heartbeat on a gateway server and keeps `/:/timeline` for a server with its own Plex token. Nothing else about playback changed. |
+| `weflixTests/Features/Auth/WeFlixAccount/WeFlixPlaybackHeartbeatTests.swift` | **New, 5 tests**: milliseconds not seconds, `direct` carries no transcode key, a transcode carries its key, `stopped` closes, an empty GUID/key is omitted, and the three states are the route's own words. |
+
+### Gate (measured, this Mac)
+
+| Target | Result |
+|---|---|
+| iOS / tvOS / macOS | **BUILD SUCCEEDED**, 0 errors each |
+| Tests | **TEST SUCCEEDED — 425 cases passed, 0 failures** (420 before, +5 here) |
+
+The three builds use `CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO` (this machine's SwiftPM-bundle Finder
+detritus, as recorded above).
+
+### Not verified
+
+- **Neither change has been seen by an eye or a tap.** No simulator session was driven here.
+- **The heartbeat has never been sent to a live server**: there are no credentials on this machine. What is proved
+  is the body it builds (5 tests) and that it is wired into the one funnel every report goes through; what is not
+  is that the dashboard shows the row, or that Plex accepts the transcode key it names.
+- **The closing report** (`state: stopped`) depends on `reportStopped` reaching the funnel when the player closes —
+  code-read, not observed. Until it arrives, the server's own reaper ends the row after its window.
+- A heartbeat the account's **stream limit** refuses (`409`) is thrown and recorded, **not yet shown** as a player
+  notice the way the web player's pill does. Recorded as the next refinement.
+- `pushItemPosition` (the offline progress sync) still reports to `/:/timeline`; the heartbeat has no
+  "record a position without a session" mode, so that path was left alone rather than given invented semantics.
+
+
 ## FIX — a Play that cannot start now says so; and the reason every Play did nothing (2026-10-25, Cline)
 
 **Luther:** *"all is working now but clicking Play nothing happens"* → asked which tap, *"on ios every play button
