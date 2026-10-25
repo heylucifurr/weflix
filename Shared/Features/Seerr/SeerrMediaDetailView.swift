@@ -4,6 +4,10 @@ import SwiftUI
 struct SeerrMediaDetailView: View {
     @State var viewModel: SeerrMediaDetailViewModel
     let onSelectMedia: (SeerrMedia) -> Void
+    /// Open a title the **library** holds, from a Seerr page. `nil` (the default) means this screen has nowhere to
+    /// open it, and then no Play button is offered at all.
+    let onPlayInLibrary: ((MediaItem) -> Void)?
+    @Environment(SessionManager.self) private var sessionManager
     @State private var requestSheet: SeerrMediaRequestSheetState?
     @State private var manageRequestsSheet: SeerrManageRequestsSheetState?
     #if os(iOS)
@@ -14,9 +18,11 @@ struct SeerrMediaDetailView: View {
     init(
         viewModel: SeerrMediaDetailViewModel,
         onSelectMedia: @escaping (SeerrMedia) -> Void = { _ in },
+        onPlayInLibrary: ((MediaItem) -> Void)? = nil,
     ) {
         _viewModel = State(initialValue: viewModel)
         self.onSelectMedia = onSelectMedia
+        self.onPlayInLibrary = onPlayInLibrary
     }
 
     var body: some View {
@@ -31,6 +37,7 @@ struct SeerrMediaDetailView: View {
                         heroHeight: heroHeight,
                         onRequestTap: presentRequestSheet,
                         onManageRequestsTap: presentManageRequestsSheet,
+                        onPlayTap: playAction,
                     )
                 #else
                     SeerrMediaDetailHeaderSection(
@@ -107,6 +114,21 @@ struct SeerrMediaDetailView: View {
     private func presentRequestSheet() {
         guard let viewModel = viewModel.makeRequestViewModel() else { return }
         requestSheet = SeerrMediaRequestSheetState(viewModel: viewModel)
+    }
+
+    /// Open this title in the library — **only** when both halves are known: the library's own key for it, and a
+    /// handler to open it with. Anything less and the button is not offered, so it can never be a dead tap.
+    private var playAction: (() -> Void)? {
+        guard let handler = onPlayInLibrary, let item = playableLibraryItem else { return nil }
+        return { handler(item) }
+    }
+
+    /// The library's item for this title, built for the server the app is reading from.
+    private var playableLibraryItem: MediaItem? {
+        let sessions = sessionManager.registry.sessions
+        let server = sessions.first { $0.isEnabled && $0.status == .ready }?.identity ?? sessions.first?.identity
+        guard let server else { return nil }
+        return viewModel.libraryItem(server: server)
     }
 
     private func presentManageRequestsSheet() {

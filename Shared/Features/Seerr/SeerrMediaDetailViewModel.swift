@@ -316,9 +316,56 @@ final class SeerrMediaDetailViewModel {
         )
     }
 
+    /// The title as the **library** holds it: the one fact needed to open its own detail screen from here.
+    ///
+    /// Overseerr reports `mediaInfo.ratingKey` once its media status is **available**, and that key is Plex's own,
+    /// so it is what the library's detail screen is addressed by. `nil` when the library does not hold the title —
+    /// and then there is nothing to play, so no Play button is offered.
+    var libraryRatingKey: String? {
+        guard isMediaAvailable(is4k: false), let key = media.mediaInfo?.ratingKey, !key.isEmpty else { return nil }
+        return key
+    }
+
+    /// The library item a **Play** button opens, for the server the app is reading from.
+    ///
+    /// The artwork is deliberately left out: Seerr's own poster is a TMDB path and a library `MediaItem` carries a
+    /// **Plex** artwork path, so passing one where the other belongs is a broken image. The detail screen fetches
+    /// the real metadata (and its artwork) on open, which is why a title found through Seerr shows its poster a
+    /// moment later rather than never.
+    func libraryItem(server: ServerIdentity) -> MediaItem? {
+        guard let key = libraryRatingKey else { return nil }
+        return MediaItem.libraryEntry(
+            ratingKey: key,
+            server: server,
+            title: media.displayTitle,
+            year: media.year,
+            kind: media.mediaType == .tv ? .series : .movie,
+            thumbPath: nil,
+        )
+    }
+
+    /// A request **of this account's** that is still live — pending or approved.
+    ///
+    /// Anything declined or completed is over, so the button may be offered again. Luther, 2026-10-25: a movie he
+    /// had already asked for still showed an enabled **Request** button, and Overseerr auto-approves by default, so
+    /// a request that is `.approved` (while the media is still `.pending`) looked like no request at all.
+    var ownActiveRequest: SeerrRequest? {
+        guard let userID = store.user?.id else { return nil }
+        return media.mediaInfo?.requests?.first { request in
+            request.requestedBy?.id == userID
+                && request.status != .declined
+                && request.status != .completed
+        }
+    }
+
+    /// Has this account already asked for this title? Then there is nothing left to press.
+    var isRequested: Bool {
+        ownActiveRequest != nil
+    }
+
     var requestButtonTitleKey: String {
-        if pendingRequest != nil {
-            return "seerr.request.action.modify"
+        if isRequested {
+            return "seerr.request.action.requested"
         }
         return "seerr.request.action.request"
     }
@@ -333,7 +380,7 @@ final class SeerrMediaDetailViewModel {
 
     var requestButtonDisabledReasonKey: String? {
         guard media.mediaType == .movie || media.mediaType == .tv else { return nil }
-        if pendingRequest != nil {
+        if isRequested {
             return nil
         }
         if !hasQuotaForMedia {
@@ -349,12 +396,12 @@ final class SeerrMediaDetailViewModel {
     }
 
     var isRequestButtonDisabled: Bool {
-        requestButtonDisabledReasonKey != nil
+        isRequested || requestButtonDisabledReasonKey != nil
     }
 
     var isRequestButtonHidden: Bool {
         guard media.mediaType == .movie || media.mediaType == .tv else { return true }
-        if pendingRequest != nil {
+        if isRequested {
             return false
         }
         let requestTypes = availableRequestTypes

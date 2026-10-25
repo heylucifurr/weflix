@@ -84,6 +84,9 @@ struct SeerrMediaInfo: Identifiable, Hashable, Decodable {
     let requests: [SeerrRequest]?
     let tmdbId: Int?
     let mediaType: SeerrMediaType?
+    /// Plex's own **rating key** for the title the library holds. Present only once Seerr reports the media as
+    /// available, and it is what lets the app open the library's own detail screen from a Seerr page.
+    let ratingKey: String?
     let jellyfinMediaId: String?
     let jellyfinMediaId4k: String?
     let downloadStatus: [SeerrDownloadItem]?
@@ -91,6 +94,7 @@ struct SeerrMediaInfo: Identifiable, Hashable, Decodable {
 
     private enum CodingKeys: String, CodingKey {
         case id, status, status4k, seasons, requests, tmdbId, mediaType
+        case ratingKey
         case jellyfinMediaId, jellyfinMediaId4k
         case downloadStatus, downloadStatus4k
     }
@@ -104,6 +108,7 @@ struct SeerrMediaInfo: Identifiable, Hashable, Decodable {
         requests = try container.decodeIfPresent([SeerrRequest].self, forKey: .requests)
         tmdbId = try container.decodeIfPresent(Int.self, forKey: .tmdbId)
         mediaType = try container.decodeIfPresent(SeerrMediaType.self, forKey: .mediaType)
+        ratingKey = Self.decodeString(container, key: .ratingKey)
         jellyfinMediaId = Self.decodeString(container, key: .jellyfinMediaId)
         jellyfinMediaId4k = Self.decodeString(container, key: .jellyfinMediaId4k)
         downloadStatus = try? container.decodeIfPresent([SeerrDownloadItem].self, forKey: .downloadStatus)

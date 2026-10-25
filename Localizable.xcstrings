@@ -13997,6 +13997,28 @@
         }
       }
     },
+    "seerr.request.action.requested" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Requested"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Demandé"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已请求"
+          }
+        }
+      }
+    },
     "seerr.request.action.submit" : {
       "localizations" : {
         "en" : {

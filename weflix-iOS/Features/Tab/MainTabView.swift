@@ -173,7 +173,13 @@ struct MainTabView: View {
                 SeerrMediaDetailView(
                     viewModel: SeerrMediaDetailViewModel(media: media, store: seerrStore),
                     onSelectMedia: coordinator.showSeerrMediaDetail,
+                    // A title the library already holds opens its own screen from here (Luther, 2026-10-25).
+                    onPlayInLibrary: { coordinator.showMediaDetail($0) },
                 )
+            }
+            .navigationDestination(for: MainCoordinator.Route.self) {
+                // Play opens a **library** title, so this stack needs the library routes too.
+                destination(for: $0)
             }
             .navigationDestination(for: SeerrRequestsRoute.self) { _ in
                 SeerrRequestsView(

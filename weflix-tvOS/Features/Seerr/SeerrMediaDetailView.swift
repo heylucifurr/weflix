@@ -102,6 +102,7 @@ struct SeerrMediaDetailView: View {
                         .padding(.horizontal, 12)
                 }
                 .actionButtonStyle(.primary)
+                .disabled(viewModel.isRequestButtonDisabled)
             }
 
             if viewModel.shouldShowManageRequestsButton,

@@ -146,7 +146,10 @@ final class MainCoordinator: ObservableObject, PlaybackPresenting {
             morePath.append(route)
             recordMediaRoute(media, depth: morePath.count, tab: tab)
         case .seerrDiscover:
-            break
+            // Discover can open a **library** title now — a Seerr page whose title the library already holds shows
+            // Play, and this is where that route lands (Luther, 2026-10-25).
+            seerrDiscoverPath.append(route)
+            recordMediaRoute(media, depth: seerrDiscoverPath.count, tab: tab)
         case let .libraryDetail(libraryId):
             var path = libraryDetailPaths[libraryId] ?? NavigationPath()
             path.append(route)

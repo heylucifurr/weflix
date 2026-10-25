@@ -330,3 +330,58 @@ struct MediaItem: Identifiable, Hashable, Codable {
         return value
     }
 }
+
+extension MediaItem {
+    /// A **library** title, built from the little an outside catalogue knows about it: the library's own rating
+    /// key, the name, the year and the shape, plus the server it lives on. Everything else starts unknown and is
+    /// filled in when the title is opened.
+    ///
+    /// One place, because two screens now hand a catalogue's own row to the library's detail screen — the
+    /// account's watchlist (`WatchlistView`) and a Seerr title the library already holds
+    /// (`SeerrMediaDetailViewModel.libraryItem`) — and a hand-built `MediaItem` in each is how the two would drift
+    /// apart.
+    static func libraryEntry(
+        ratingKey: String,
+        server: ServerIdentity,
+        title: String,
+        year: Int?,
+        kind: MediaKind,
+        thumbPath: String?,
+        guid: String = "",
+    ) -> MediaItem {
+        MediaItem(
+            id: ratingKey,
+            identity: MediaIdentity(server: server, itemID: ratingKey),
+            guid: guid,
+            summary: nil,
+            title: title,
+            type: kind,
+            parentRatingKey: nil,
+            grandparentRatingKey: nil,
+            genres: [],
+            year: year,
+            duration: nil,
+            videoResolution: nil,
+            rating: nil,
+            ratings: [],
+            contentRating: nil,
+            studio: nil,
+            tagline: nil,
+            thumbPath: thumbPath,
+            artPath: nil,
+            artworkCornerColors: nil,
+            viewOffset: nil,
+            viewCount: nil,
+            childCount: nil,
+            leafCount: nil,
+            viewedLeafCount: nil,
+            grandparentTitle: nil,
+            parentTitle: nil,
+            parentIndex: nil,
+            index: nil,
+            grandparentThumbPath: nil,
+            grandparentArtPath: nil,
+            parentThumbPath: nil,
+        )
+    }
+}

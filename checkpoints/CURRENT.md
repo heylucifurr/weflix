@@ -1,3 +1,51 @@
+## FIX — Discover: a title already asked for says so, and a title the library holds plays (2026-10-25, Cline)
+
+**Luther:** *"ON THE DISCOVER, i click on movie i requested.. but i still see Request Button. this will confuse
+people. this should be button says Requested and disabled. if the movie is available in the library that button
+should be a play button."*
+
+### Why a requested movie still offered **Request**
+
+`SeerrMediaRequestAvailability.pendingRequest()` matched only a request with `status == .pending`, and **Overseerr
+auto-approves by default**: the request sits at `.approved` while the *media* is still `.pending`, so the app saw
+"no request of mine" — and, with the library not yet holding the title, `isRequestButtonHidden` was false. Result:
+an enabled **Request** button above a **Requested** chip. Two different questions had been collapsed into one:
+*has this account asked?* and *is it still waiting for a decision?*
+
+### What the app does now
+
+| The title | The button |
+|---|---|
+| **in the library** | **Play** — opens the library's own detail screen |
+| **already asked for** by this account (pending **or** approved) | **Requested**, and **disabled** — nothing left to press |
+| neither | **Request**, as before (with its quota/permission reasons) |
+
+- `SeerrMediaDetailViewModel.ownActiveRequest` — this account's live request (anything not `.declined` and not
+  `.completed`); `isRequested` is its answer, and it drives `requestButtonTitleKey` (`seerr.request.action.requested`
+  → **Requested**, added in en/fr/zh), `isRequestButtonDisabled` and `isRequestButtonHidden`.
+- **All three platforms** get the requested/disabled behaviour for free: the iOS, macOS and tvOS headers all read
+  those view-model properties. tvOS's own detail view was missing `.disabled` and now has it.
+- **Play**: `libraryRatingKey` is Overseerr's `mediaInfo.ratingKey` (Plex's own key, reported once the media is
+  available) and `libraryItem(server:)` builds the library `MediaItem` for the active server — through a new
+  one-place factory, `MediaItem.libraryEntry(...)`, which `WatchlistView` now uses too instead of its own copy.
+  The button is offered **only** when the key and an open handler both exist, so it can never be a dead tap.
+- Wiring: `SeerrMediaDetailView` gained an optional `onPlayInLibrary`; the iOS Discover stack passes the
+  coordinator and gained the library `Route` destination, and `MainCoordinator.showMediaDetail` now appends for
+  `.seerrDiscover` (it used to `break`, because nothing there could open a library title).
+
+**Scope, stated plainly:** the **Play** button is **iOS only** for this step. macOS's own header and tvOS's own
+detail view need their own navigation wiring (macOS routes Seerr through `AppModel`, tvOS through its own stack),
+and a Play button there would be a dead tap until that is done. Requested/disabled applies everywhere.
+
+**Not verified:** that the live Overseerr answers the proxied `/movie/{id}` with `mediaInfo.ratingKey`. No session
+could be driven from this workstation (the app is signed in on the simulator, but this harness has no tap tool). If
+it is absent, the Play button simply does not appear — that is the designed fallback, not a silent failure — and
+the next step would be the server resolving the library key by TMDB id. Luther's check: open a title he has asked
+for (**Requested**, greyed) and one the library holds (**Play**, opens the library screen).
+
+**Gate:** iOS · tvOS · macOS **BUILD SUCCEEDED**, 0 errors; `xcodebuild test` **TEST SUCCEEDED**.
+
+
 ## FIX — the Requests screen: only the keys Overseerr's `/request` accepts (2026-10-25, Cline)
 
 **Luther, after the menu work:** *"requests button on discover says Unknown querry parameter"*. Confirmed on the

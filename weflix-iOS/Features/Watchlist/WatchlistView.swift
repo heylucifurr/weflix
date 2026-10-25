@@ -103,39 +103,14 @@ struct WatchlistView: View {
     private func mediaItem(for entry: WeFlixWatchlistEntry) -> MediaItem? {
         guard let key = entry.libraryRatingKey, !key.isEmpty, let server = activeServer else { return nil }
 
-        return MediaItem(
-            id: key,
-            identity: MediaIdentity(server: server, itemID: key),
-            guid: entry.guid ?? "",
-            summary: nil,
+        return MediaItem.libraryEntry(
+            ratingKey: key,
+            server: server,
             title: entry.title,
-            type: entry.mediaKind,
-            parentRatingKey: nil,
-            grandparentRatingKey: nil,
-            genres: [],
             year: entry.year,
-            duration: nil,
-            videoResolution: nil,
-            rating: nil,
-            ratings: [],
-            contentRating: nil,
-            studio: nil,
-            tagline: nil,
+            kind: entry.mediaKind,
             thumbPath: entry.thumb,
-            artPath: nil,
-            artworkCornerColors: nil,
-            viewOffset: nil,
-            viewCount: nil,
-            childCount: nil,
-            leafCount: nil,
-            viewedLeafCount: nil,
-            grandparentTitle: nil,
-            parentTitle: nil,
-            parentIndex: nil,
-            index: nil,
-            grandparentThumbPath: nil,
-            grandparentArtPath: nil,
-            parentThumbPath: nil,
+            guid: entry.guid ?? "",
         )
     }
 

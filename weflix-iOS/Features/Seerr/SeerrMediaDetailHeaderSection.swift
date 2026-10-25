@@ -7,6 +7,9 @@ struct SeerrMediaDetailHeaderSection: View {
     let heroHeight: CGFloat
     let onRequestTap: () -> Void
     let onManageRequestsTap: () -> Void
+    /// Open the title in the library. `nil` when there is no library item to open — the button is then simply not
+    /// offered, rather than shown and dead.
+    let onPlayTap: (() -> Void)?
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -38,7 +41,15 @@ struct SeerrMediaDetailHeaderSection: View {
 
     @ViewBuilder
     private var actions: some View {
-        if !viewModel.isRequestButtonHidden {
+        // The library holds it: **Play**, not Request (Luther, 2026-10-25). The button appears only when the app
+        // has somewhere to go — the library's rating key and a handler to open it with.
+        if let onPlayTap, viewModel.libraryRatingKey != nil {
+            Button(action: onPlayTap) {
+                Label("common.actions.play", systemImage: "play.fill")
+                    .frame(maxWidth: .infinity)
+            }
+            .actionButtonStyle(.primary)
+        } else if !viewModel.isRequestButtonHidden {
             Button(action: onRequestTap) {
                 Label(LocalizedStringKey(viewModel.requestButtonTitleKey), systemImage: requestButtonIcon)
                     .frame(maxWidth: .infinity)
@@ -66,7 +77,10 @@ struct SeerrMediaDetailHeaderSection: View {
     }
 
     private var requestButtonIcon: String {
-        viewModel.pendingRequest == nil ? "paperplane.fill" : "square.and.pencil"
+        if viewModel.isRequested {
+            return "checkmark"
+        }
+        return viewModel.pendingRequest == nil ? "paperplane.fill" : "square.and.pencil"
     }
 
     @ViewBuilder
