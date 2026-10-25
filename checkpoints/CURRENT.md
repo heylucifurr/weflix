@@ -1,3 +1,33 @@
+## FIX — the filter chips I never should have added; pills restored, as menus (2026-10-25, Cline)
+
+**Luther:** *"why there are a lot of filter types you added i did not asked for????? WTF???"*
+
+He is right and it was my misreading. His deliverable was always the **row** — `Recommended · Movies · Filter · Sort ·
+🔳` — and when he said *"no need to uncollapse the filer, i want it all visible in one row"* I read it as *"draw every
+filter as its own chip"*. So the library screen filled with `Genre · Decade · Content Rating · Unwatched · In
+Progress · Collection · Actor · …` — chips he never asked for, and a second `19cdbcc` he had to review.
+
+| What | Now |
+|---|---|
+| The filter chips I added inline (`19cdbcc`) | **Reverted.** `Filter` is one pill again. |
+| The pills `Movies`, `Filter`, `Sort` | **Menus** — the choices appear over the screen, never as a row that pushes the grid down. That is what *"no need to uncollapse"* actually asked for, and it holds for all three. |
+| The option rows below the pills (`optionsRow`, `typeOptions`, `sortOptions`, `sortDirectionImage`) | **Deleted.** There is no second line left anywhere on the library screen. |
+| `LibraryBrowsePillLabel` | New: the capsule's *look* on its own, so a `Button` (back, reset) and a `Menu` (type, filter, sort) wear the same pill. |
+
+The one row is now exactly:
+
+```
+Recommended   Movies(▾)   Filter(▾)   Sort(▾)   🔳
+```
+
+**Gate:** iOS · tvOS · macOS **BUILD SUCCEEDED**, 0 errors; `xcodebuild test` **TEST SUCCEEDED — 425 passed** (two
+`DoubleTapSeekTests` failed in the first run at 7.6 s each and pass in isolation — the timing flakiness already on
+record, not this change). The signed iOS build was installed and launched on the booted simulator
+(`me.weflix`, PID 94611) for Luther to look at.
+
+**Not verified:** no eye has seen the row (I cannot tap into a library from here).
+
+
 ## FIX — the library row was `Recommended · 🔳`: the pills were never loaded (2026-10-25, Cline)
 
 **Luther, after the two commits above:** *"same still wtf???"* — and a screenshot of the **TV Shows** library settled

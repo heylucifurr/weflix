@@ -85,10 +85,6 @@ struct LibraryBrowseControlsView: View {
                 topRow
             }
 
-            if showsServerControls, let panel = viewModel.activePanel {
-                optionsRow(for: panel)
-            }
-
             if let itemCount, itemCount > 0 {
                 Text(String(localized: "library.browse.count.items \(itemCount)"))
                     .font(.facts)
@@ -126,88 +122,6 @@ struct LibraryBrowseControlsView: View {
             folderTreeToggle: folderTreeToggle,
             layoutToggle: layoutToggle,
         )
-    }
-
-    @ViewBuilder
-    private func optionsRow(for panel: LibraryBrowseControlsViewModel.Panel) -> some View {
-        switch panel {
-        case .type:
-            typeOptions
-        case .filters:
-            // Empty on purpose: the filters are chips in the row itself now, so there is nothing to uncollapse
-            // (Luther, 2026-10-25). The case stays because the panel state is still a valid thing to hold.
-            EmptyView()
-        case .sort:
-            sortOptions
-        }
-    }
-
-    private var typeOptions: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: LayoutMetrics.chipSpacing) {
-                ForEach(viewModel.displayTypes) { type in
-                    LibraryBrowsePillButton(
-                        title: type.title,
-                        systemImage: nil,
-                        isSelected: type.key == viewModel.selectedDisplayType?.key,
-                        showsDisclosure: false,
-                    ) {
-                        viewModel.selectDisplayType(type)
-                    }
-                }
-            }
-            .padding(rowPadding)
-        }
-        .mouseDragScrolling()
-    }
-    private var sortOptions: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: LayoutMetrics.chipSpacing) {
-                if viewModel.isJellyfinBrowse {
-                    ForEach(viewModel.jellyfinSortOptions) { sort in
-                        let isSelected = viewModel.browseSessionSort == sort.id
-                        LibraryBrowsePillButton(
-                            title: sort.title,
-                            systemImage: isSelected ? viewModel.jellyfinSortDirectionImage : nil,
-                            isSelected: isSelected,
-                            showsDisclosure: false,
-                        ) {
-                            viewModel.toggleJellyfinSort(sort)
-                        }
-                    }
-                } else {
-                    ForEach(viewModel.availableSorts, id: \.key) { sort in
-                        let selection = viewModel.selectedSort
-                        let isSelected = selection?.sort.key == sort.key
-                        let systemImage = sortDirectionImage(for: selection, sort: sort)
-
-                        LibraryBrowsePillButton(
-                            title: sort.title,
-                            systemImage: systemImage,
-                            isSelected: isSelected,
-                            showsDisclosure: false,
-                        ) {
-                            viewModel.toggleSort(sort)
-                        }
-                    }
-                }
-            }
-            .padding(rowPadding)
-        }
-        .mouseDragScrolling()
-    }
-
-    private func sortDirectionImage(
-        for selection: LibraryBrowseControlsViewModel.SortSelection?,
-        sort: PlexSectionItemSort,
-    ) -> String? {
-        guard let selection, selection.sort.key == sort.key else { return nil }
-        switch selection.direction {
-        case .asc:
-            return "arrow.up"
-        case .desc:
-            return "arrow.down"
-        }
     }
 
     private var rowPadding: EdgeInsets {
@@ -282,62 +196,115 @@ struct LibraryBrowsePillsRow: View {
             )
         }
         if viewModel.hasDisplayTypes {
-            LibraryBrowsePillButton(
-                title: viewModel.typePillTitle,
-                systemImage: "square.grid.2x2",
-                isSelected: viewModel.activePanel == .type,
-                showsDisclosure: true,
-            ) {
-                viewModel.togglePanel(.type)
+            Menu {
+                ForEach(viewModel.displayTypes) { type in
+                    Button {
+                        viewModel.selectDisplayType(type)
+                    } label: {
+                        if type.key == viewModel.selectedDisplayType?.key {
+                            Label(type.title, systemImage: "checkmark")
+                        } else {
+                            Text(type.title)
+                        }
+                    }
+                }
+            } label: {
+                LibraryBrowsePillLabel(
+                    title: viewModel.typePillTitle,
+                    systemImage: "square.grid.2x2",
+                    isSelected: false,
+                    showsDisclosure: true,
+                )
             }
         }
 
+        /*
+         * **One pill per control, and never a second line** (Luther, 2026-10-25).
+         *
+         * The row he asked for is `Recommended · Movies · Filter · Sort · 🔳`. An earlier attempt expanded every
+         * filter into its own chip in this row — *"why there are a lot of filter types you added i did not asked
+         * for"* — so the chips are gone and `Filter` is one pill again.
+         *
+         * Each pill is a **menu**: the choices appear over the screen, never as a row that pushes the grid down,
+         * which is what *"no need to uncollapse"* asked for.
+         */
         if viewModel.showsFilterPill {
-            /*
-             * The filters **themselves**, not a chip that reveals them (Luther, 2026-10-25): *"no need to uncollapse
-             * the filer. i want it all visible in one row."* They used to sit behind a `Filter` pill that opened a
-             * second line; now they are chips in this one.
-             *
-             * Choosing among a filter's **values** is still a sheet (`toggleFilter` opens it for anything that is
-             * not a boolean), and a boolean filter still toggles on the spot.
-             */
-            if viewModel.isJellyfinBrowse {
-                ForEach(LibraryBrowseControlsViewModel.JellyfinFilter.allCases) { filter in
-                    let isSelected = viewModel.jellyfinFilterIsSelected(filter)
-                    LibraryBrowsePillButton(
-                        title: viewModel.jellyfinFilterLabel(filter),
-                        systemImage: isSelected && filter.isBoolean ? "checkmark" : nil,
-                        isSelected: isSelected,
-                        showsDisclosure: !filter.isBoolean,
-                    ) {
-                        viewModel.toggleJellyfinFilter(filter)
+            Menu {
+                if viewModel.isJellyfinBrowse {
+                    ForEach(LibraryBrowseControlsViewModel.JellyfinFilter.allCases) { filter in
+                        let isSelected = viewModel.jellyfinFilterIsSelected(filter)
+                        Button {
+                            viewModel.toggleJellyfinFilter(filter)
+                        } label: {
+                            if isSelected {
+                                Label(viewModel.jellyfinFilterLabel(filter), systemImage: "checkmark")
+                            } else {
+                                Text(viewModel.jellyfinFilterLabel(filter))
+                            }
+                        }
                     }
-                }
-            } else {
-                ForEach(viewModel.availableFilters, id: \.filter) { filter in
-                    let selection = viewModel.filterSelection(for: filter)
-                    let isSelected = selection?.isEnabled == true
+                } else {
+                    ForEach(viewModel.availableFilters, id: \.filter) { filter in
+                        let selection = viewModel.filterSelection(for: filter)
 
-                    LibraryBrowsePillButton(
-                        title: filterLabel(for: filter, selection: selection),
-                        systemImage: isSelected ? "checkmark" : nil,
-                        isSelected: isSelected,
-                        showsDisclosure: !filter.isBoolean,
-                    ) {
-                        viewModel.toggleFilter(filter)
+                        Button {
+                            viewModel.toggleFilter(filter)
+                        } label: {
+                            if selection?.isEnabled == true {
+                                Label(filterLabel(for: filter, selection: selection), systemImage: "checkmark")
+                            } else {
+                                Text(filterLabel(for: filter, selection: selection))
+                            }
+                        }
                     }
                 }
+            } label: {
+                LibraryBrowsePillLabel(
+                    title: viewModel.filterPillTitle,
+                    systemImage: "line.3.horizontal.decrease.circle",
+                    isSelected: hasActiveFilter,
+                    showsDisclosure: true,
+                )
             }
         }
 
         if viewModel.showsSortPill {
-            LibraryBrowsePillButton(
-                title: viewModel.sortPillTitle,
-                systemImage: "arrow.up.arrow.down.circle",
-                isSelected: viewModel.activePanel == .sort,
-                showsDisclosure: true,
-            ) {
-                viewModel.togglePanel(.sort)
+            Menu {
+                if viewModel.isJellyfinBrowse {
+                    ForEach(viewModel.jellyfinSortOptions) { sort in
+                        let isSelected = viewModel.browseSessionSort == sort.id
+                        Button {
+                            viewModel.toggleJellyfinSort(sort)
+                        } label: {
+                            if isSelected {
+                                Label(sort.title, systemImage: viewModel.jellyfinSortDirectionImage)
+                            } else {
+                                Text(sort.title)
+                            }
+                        }
+                    }
+                } else {
+                    ForEach(viewModel.availableSorts, id: \.key) { sort in
+                        let selection = viewModel.selectedSort
+
+                        Button {
+                            viewModel.toggleSort(sort)
+                        } label: {
+                            if let image = sortDirectionImage(for: selection, sort: sort) {
+                                Label(sort.title, systemImage: image)
+                            } else {
+                                Text(sort.title)
+                            }
+                        }
+                    }
+                }
+            } label: {
+                LibraryBrowsePillLabel(
+                    title: viewModel.sortPillTitle,
+                    systemImage: "arrow.up.arrow.down.circle",
+                    isSelected: false,
+                    showsDisclosure: true,
+                )
             }
         }
 
@@ -360,8 +327,57 @@ struct LibraryBrowsePillsRow: View {
         guard let selection, let option = selection.selectedOption else { return filter.title }
         return filter.title + ": " + option.title
     }
+
+    /// Whether any filter is on, so the `Filter` pill can show it — a selection mark, not a second line.
+    private var hasActiveFilter: Bool {
+        if viewModel.isJellyfinBrowse {
+            return LibraryBrowseControlsViewModel.JellyfinFilter.allCases.contains {
+                viewModel.jellyfinFilterIsSelected($0)
+            }
+        }
+        return viewModel.availableFilters.contains { viewModel.filterSelection(for: $0)?.isEnabled == true }
+    }
+
+    private func sortDirectionImage(
+        for selection: LibraryBrowseControlsViewModel.SortSelection?,
+        sort: PlexSectionItemSort,
+    ) -> String? {
+        guard let selection, selection.sort.key == sort.key else { return nil }
+        switch selection.direction {
+        case .asc:
+            return "arrow.up"
+        case .desc:
+            return "arrow.down"
+        }
+    }
 }
 
+
+/// The pill's **look**, on its own, so a `Button` and a `Menu` can wear exactly the same capsule.
+private struct LibraryBrowsePillLabel: View {
+    let title: String
+    let systemImage: String?
+    let isSelected: Bool
+    let showsDisclosure: Bool
+    var showsTitle = true
+
+    var body: some View {
+        HStack(spacing: 6) {
+            if let systemImage {
+                Image(systemName: systemImage)
+            }
+            if showsTitle {
+                Text(title)
+            }
+            if showsDisclosure {
+                Image(systemName: "chevron.down")
+                    .font(.caption2)
+                    .opacity(0.7)
+            }
+        }
+        .chipAppearance(isSelected: isSelected)
+    }
+}
 
 private struct LibraryBrowsePillButton: View {
     let title: String
@@ -373,21 +389,14 @@ private struct LibraryBrowsePillButton: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 6) {
-                if let systemImage {
-                    Image(systemName: systemImage)
-                }
-                if showsTitle {
-                    Text(title)
-                }
-                if showsDisclosure {
-                    Image(systemName: "chevron.down")
-                        .font(.caption2)
-                        .opacity(0.7)
-                }
-            }
+            LibraryBrowsePillLabel(
+                title: title,
+                systemImage: systemImage,
+                isSelected: isSelected,
+                showsDisclosure: showsDisclosure,
+                showsTitle: showsTitle,
+            )
         }
-        .buttonStyle(.chip(isSelected: isSelected))
         .accessibilityLabel(title)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
