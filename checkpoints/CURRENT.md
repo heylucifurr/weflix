@@ -1,3 +1,27 @@
+## CHANGE — the brand colour is WeFlix red `#E50914`, not the pink (2026-10-25, Cline)
+
+**Luther:** *"can you change the main accent color to e50914 instead of that pink looking"*
+
+It was `BrandPrimary` **and** `AccentColor` in the asset catalogs: display-P3 `(255, 66, 107)` — a pink. Both are now
+**sRGB `(233, 9, 20)`** = `#E50914`, in `weflix-iOS`, `weflix-macOS` and `weflix-tvOS` — six colour sets, and the
+tvOS `AccentColor`, which had been **empty** (no value at all), now carries the red too.
+
+The colour space is switched to `srgb` rather than reusing `display-p3`: `#E50914` is an sRGB hex, and dropping its
+components into a P3 set renders a different, more saturated red than the value asked for. Nothing else moved —
+`BrandSecondary` (near-white), `BrandPrimaryForeground` (the near-black text laid on the brand colour) and
+`Background` are untouched.
+
+One change covers everything the accent reaches, because both `Color.brandPrimary` (asset symbol) and
+`Color.accentColor` resolve from these sets: the selected tab, checkmarks and current-option marks
+(`.selectionAccent`), the sign-in button, profile avatars, and the Seerr/requests controls.
+
+**Measured:** iOS · tvOS · macOS **BUILD SUCCEEDED**, 0 errors; `xcodebuild test` **TEST SUCCEEDED**; and the
+simulator shows the **Home** tab and its icon in the new red rather than the pink (screenshot this session). The
+`Localizable.xcstrings` in the same commit only marks `seerr.request.action.modify` and
+`seerr.requests.filter.completed` as Xcode-`stale`, which is the consequence of removing their last usages earlier
+in the session.
+
+
 ## FIX — Settings for a friend: no Interface section, no Integrations, no licence row (2026-10-25, Cline)
 
 **Luther:** *"for non admin account. in the profile when you click it. can you hide in the settings Interface, and the

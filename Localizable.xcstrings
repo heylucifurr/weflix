@@ -13954,6 +13954,7 @@
       }
     },
     "seerr.request.action.modify" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -14826,6 +14827,7 @@
       }
     },
     "seerr.requests.filter.completed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
