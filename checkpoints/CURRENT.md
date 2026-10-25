@@ -10,11 +10,11 @@ whole intergration, Licenses"*
   the macOS row and the iPhone section), and the **Licences** row is gone. What stays: My account, Playback, Audio,
   Subtitles, Downloads, Storage.
 
-**Flagged — the licence row is the one thing here I would push back on.** It is one of the two places the GPL-3.0
-notice lives (the other is `README.md`), and `docs/PROJECT.md` §6 records both as *part of the deliverable, not
-decoration*. Hidden from a friend, the notice is no longer in what **they** see in the app. It is implemented as
-asked; keeping it visible to everybody is a one-`if` change, and `README.md`/`LICENSE` are untouched either way, so
-the distribution still carries the licence.
+**Flagged — and Luther confirmed it (2026-10-25): *"thats fine hide it"*.** The licence row is one of the two places
+the GPL-3.0 notice lives (the other is `README.md`), and `docs/PROJECT.md` §6 records both as *part of the
+deliverable, not decoration*. He was shown that a friend would no longer see it in the app and chose to hide it
+anyway, so the row stays owner-only. `README.md` and `LICENSE` are untouched, so the distribution still carries the
+licence.
 
 **Not covered:** tvOS's own settings screen (`weflix-tvOS/Features/Settings/SettingsNavigation.swift` filters only
 accounts and profiles). The ask was the iPhone profile menu; say the word and tvOS follows.
