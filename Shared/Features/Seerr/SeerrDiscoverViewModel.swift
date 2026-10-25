@@ -78,11 +78,11 @@ final class SeerrDiscoverViewModel {
                 firstAirDateGte: upcomingDate,
             )
 
-            trending = trendingPage.results
-            popularMovies = moviesPage.results
-            popularTV = tvPage.results
-            upcomingMovies = upcomingMoviesPage.results
-            upcomingTV = upcomingTVPage.results
+            trending = Self.inLibraryOnly(trendingPage.results)
+            popularMovies = Self.inLibraryOnly(moviesPage.results)
+            popularTV = Self.inLibraryOnly(tvPage.results)
+            upcomingMovies = Self.inLibraryOnly(upcomingMoviesPage.results)
+            upcomingTV = Self.inLibraryOnly(upcomingTVPage.results)
         } catch {
             handleLoadError(error, preservingExistingContent: preservingExistingContent)
         }
@@ -116,6 +116,26 @@ final class SeerrDiscoverViewModel {
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter
     }()
+
+    /// "Show only what's in the library": a title belongs to the library when Seerr reports the server already has
+    /// it — fully available, or partially available (some seasons or episodes are present). Anything else is not in
+    /// the library and is hidden from the discover rails: `.unknown`, `.pending`, `.processing`, `.blacklisted`,
+    /// `.deleted`, and a title with no `mediaInfo` at all (Seerr has no record of it for this server).
+    ///
+    /// The rails are filtered where they are assigned in `fetch`, so every surface that reads `trending`,
+    /// `popularMovies`, `popularTV`, `upcomingMovies` and `upcomingTV` — the iOS/macOS discover screen and the tvOS
+    /// one, plus its hero — sees the same in-library set. A rail whose titles are all outside the library simply
+    /// disappears, and the screen falls back to its "nothing to show" state when every rail does.
+    nonisolated static func isInLibrary(_ media: SeerrMedia) -> Bool {
+        switch media.mediaInfo?.status {
+        case .available, .partiallyAvailable: return true
+        default: return false
+        }
+    }
+
+    nonisolated static func inLibraryOnly(_ items: [SeerrMedia]) -> [SeerrMedia] {
+        items.filter(isInLibrary)
+    }
 
     private func handleLoadError(_ error: Error, preservingExistingContent: Bool) {
         if preservingExistingContent, hasContent {

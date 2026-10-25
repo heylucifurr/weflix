@@ -31,27 +31,34 @@ struct AccountsSettingsView: View {
                 }
             }
 
-            Section {
-                Button { isAddingAccount = true } label: {
-                    Label("settings.accounts.add", systemImage: "plus.circle")
+            // Adding a Plex account or a Jellyfin server is retired on iPhone (Luther, 2026-10-25): the app holds
+            // one WeFlix account, so there is nothing to add. The Mac keeps the flow.
+            #if !os(iOS)
+                Section {
+                    Button { isAddingAccount = true } label: {
+                        Label("settings.accounts.add", systemImage: "plus.circle")
+                    }
+                    .foregroundStyle(.primary)
                 }
-                .foregroundStyle(.primary)
-            }
+            #endif
         }
         .navigationTitle("settings.accounts.title")
         .navigationDestination(item: $detailServer) { server in
             ServerDetailView(server: server)
         }
+        #if !os(iOS)
         .sheet(isPresented: $isAddingAccount) {
             AccountSetupView(purpose: .settings, sessionManager: sessionManager) {
                 isAddingAccount = false
             }
         }
+        #endif
         .sheet(item: $reconnectingAccount) { account in
             NavigationStack {
                 ReconnectAccountView(account: account) { reconnectingAccount = nil }
             }
         }
+        #if !os(iOS)
         .alert(
             "settings.accounts.remove.title",
             isPresented: Binding(
@@ -69,7 +76,8 @@ struct AccountsSettingsView: View {
         } message: { account in
             Text("settings.accounts.remove.message \(account.displayName)")
         }
-        #if !os(tvOS)
+        #endif
+        #if !os(tvOS) && !os(iOS)
         .accountRemovalPrompt(removalFlow)
         #endif
     }
@@ -82,28 +90,34 @@ struct AccountsSettingsView: View {
                 .foregroundStyle(.secondary)
         }
         ForEach(sessions) { session in
-            // Separate controls rather than a NavigationLink, which would swallow taps on the toggle.
-            HStack(spacing: 12) {
-                Button { detailServer = session.identity } label: {
-                    ServerSessionRow(session: session)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
+            #if os(iOS)
+                // iPhone: the account and its server, shown as information — no enable toggle and no details
+                // chevron (Luther, 2026-10-25). The one server is the WeFlix gateway; there is nothing to switch.
+                ServerSessionRow(session: session)
+            #else
+                // Separate controls rather than a NavigationLink, which would swallow taps on the toggle.
+                HStack(spacing: 12) {
+                    Button { detailServer = session.identity } label: {
+                        ServerSessionRow(session: session)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
 
-                Toggle("settings.server.enabled", isOn: Binding(
-                    get: { session.isEnabled },
-                    set: { sessionManager.registry.setEnabled($0, server: session.identity) },
-                ))
-                .labelsHidden()
+                    Toggle("settings.server.enabled", isOn: Binding(
+                        get: { session.isEnabled },
+                        set: { sessionManager.registry.setEnabled($0, server: session.identity) },
+                    ))
+                    .labelsHidden()
 
-                Button { detailServer = session.identity } label: {
-                    Image(systemName: "info.circle")
-                        .imageScale(.large)
+                    Button { detailServer = session.identity } label: {
+                        Image(systemName: "info.circle")
+                            .imageScale(.large)
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel(Text("settings.server.details"))
                 }
-                .buttonStyle(.borderless)
-                .accessibilityLabel(Text("settings.server.details"))
-            }
+            #endif
             if session.status == .needsReauthentication {
                 Button("settings.accounts.reconnect") { reconnectingAccount = account }
             }
@@ -111,7 +125,11 @@ struct AccountsSettingsView: View {
         if sessionManager.registry.linkStatuses[account.id] == .needsReauthentication, sessions.isEmpty {
             Button("settings.accounts.reconnect") { reconnectingAccount = account }
         }
+        #if !os(iOS)
+        // Removing the account is retired on iPhone: the app holds one WeFlix account, signed out from the profile
+        // menu (Luther, 2026-10-25). The Mac keeps the flow.
         Button("settings.accounts.remove", role: .destructive) { accountPendingRemoval = account }
+        #endif
     }
 
     private func isLinkedToActiveProfile(_ account: MediaAccount) -> Bool {

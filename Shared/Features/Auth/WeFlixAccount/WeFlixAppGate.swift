@@ -57,6 +57,9 @@ struct WeFlixAppGate<Ready: View>: View {
         // That is the loop that starved every other request (2026-10-24). One stable container, and the modifiers
         // below belong to something whose identity does not move.
         ZStack { content }
+            // The sign-in controller is handed down so the profile menu can sign out with the *same* sequence the
+            // signed-in card uses (tell the server, then forget the account) — one sign-out, one implementation.
+            .environment(session)
             .task {
                 // Once per launch, and again after a "try again" tap.
                 if case .checking = session.status {

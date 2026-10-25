@@ -1,3 +1,103 @@
+## FIX — the Requests screen: only the keys Overseerr's `/request` accepts (2026-10-25, Cline)
+
+**Luther, after the menu work:** *"requests button on discover says Unknown querry parameter"*. Confirmed on the
+iPhone 17 Pro simulator first (the menu itself was correct: `Settings · Downloads · My Watchlist · Favorites`,
+then `Sign Out`), then fixed on both sides.
+
+**What was wrong.** Overseerr validates `GET /request` strictly and answers
+`400 {"message":"Unknown query parameter '<key>'"}` for a key outside its schema. `SeerrRequestRepository.getRequests()`
+was sending `mediaType` and `sortDirection` — right for the discover rails, rejected here — so the list died on its
+first call. The server proxy forwarded them; it now narrows that one path to `take`, `skip`, `filter`, `sort`
+(+ the forced `requestedBy`), which is exactly what the web's own `seerrMinePath()` sends.
+
+**App changes (so the two halves agree):**
+
+- `SeerrRequestRepository.getRequests()` takes `take`, `skip`, `filter`, `sort` — the two unsupported keys are gone.
+- `SeerrRequestsView`'s options menu keeps the **sort** picker and drops the **media-type** picker and the
+  **oldest-first** toggle, and `optionsIcon` no longer reads them; `SeerrRequestMediaFilter` is deleted and
+  `SeerrRequestQuery` loses `mediaType` and `isAscending`. The status chips stay.
+- `SeerrRequestsViewModel`'s two reads send only the four keys.
+
+**Not verified:** whether Overseerr's `/request` `filter` accepts every chip the app offers — `completed` in
+particular (the app's set is `all, pending, approved, completed, processing, failed, available, unavailable,
+deleted`). Overseerr's filter schema is recorded nowhere in either repository and no live instance was reachable
+from this workstation, so this is the next thing to check with a real account rather than a guess to encode now.
+
+**Gate:** iOS · tvOS · macOS **BUILD SUCCEEDED**, 0 errors; `xcodebuild test` **TEST SUCCEEDED**; server `tsc` 0,
+`app-seerr-proxy` **18/18**, `build` exit 0.
+
+
+## PHASE APP WATCHLIST — My Watchlist and My Requests in the profile menu, and a simpler iPhone Settings (2026-10-25, Cline)
+
+**Luther's five, for the iPhone:** *"1 clinking setting> remove profiles. 2 Accounts and server rename it to My
+account. It shows your account details. no need fr toggle button and info icon. 3. remove \"remove the account\"
+remove add plex or jellyfin 4. clickng profile icon add my watchlist and my request. 5. remove switch profile and
+change to sign out"* — and, on being asked where the list lives, *"i have a watchlist o weflix.me data is saved
+on postgress"*, which is right: the list is WeFlix's own `watchlist_entries`, per account.
+
+### The one thing that was actually missing
+
+The watchlist has lived on WeFlix since beta fix #2 (`watchlist_entries`, keyed by `profile_id`) and the web reads
+it through `/api/plex-actions/watchlist` — **with the `weflixSession` cookie**. The native client authenticates
+with its **device bearer token** through `/api/app/*`, and there was no `/api/app/watchlist`. So the list existed
+and the app simply had no door to it; that door is built in the server repository, this same day.
+
+### What the iPhone app does now
+
+| # | Ask | Done |
+|---|---|---|
+| 1 | Settings → no **Profiles** | the `profiles.title` link is `#if os(macOS)` now; iPhone's Settings no longer lists Profiles |
+| 2 | "Accounts and servers" → **My account**; account details; no toggle, no info icon | `settings.accounts.title` is **My account** (en `My account` / fr `Mon compte` / zh `我的账户`); on iPhone the server row is name + status only — the enable `Toggle` and the `info.circle` button are `#if !os(iOS)` |
+| 3 | no "Remove the account", no "Add a Plex account or a Jellyfin server" | both are `#if !os(iOS)` |
+| 4 | profile icon → **My Watchlist** only | `UserMenuView` lists My Watchlist. **Requests stay in Discover** — Luther, correcting the first pass: *"no need to add my request in the menu from profile icon. instead in the discover. theres a button Requests."* The Discover **Requests** button already exists and is **account-scoped by the server** (`lib/app-seerr-routes.ts`'s `appSeerrPlan()` forces `requestedBy` to the account's own Overseerr id on every list read), so nothing was added to the menu: the requests list shows this person's own requests, whoever they are |
+| 5 | no Switch Profile → **Sign Out** | the Switch-profile section is gone; a destructive Sign Out runs `WeFlixSessionController.signOut()` then `SessionManager.forgetWeFlixAccount()` — the same pair the signed-in card uses |
+
+**Where My Watchlist sits** (a second correction, 2026-10-25): *"on profile menu on ios dont separate the watchlist
+from the other. put it above favorites."* It is **not** its own section — the menu's one list is Settings,
+Downloads (when it is not a tab), **My Watchlist**, Favorites (when it is not a tab), with **Sign Out** in its own
+section last. The menu's rows are: `Settings · Downloads · My Watchlist · Favorites` then `Sign Out`.
+
+### The new screens
+
+- **`My Watchlist`** (`weflix-iOS/Features/Watchlist/WatchlistView.swift`) reads `GET /api/app/watchlist` with the
+  device token (`WeFlixWatchlistClient`) and draws a poster grid. A poster whose entry carries a library rating key
+  opens the title (a `MediaItem` built from the key + the active server identity, handed to
+  `MainCoordinator.showMediaDetail` exactly as the Favorites row does); one the library does not hold is shown but
+  inert. The artwork is fetched through the gateway's `/api/image` **with the bearer header**
+  (`WeFlixGatewayURL.artworkRequest`), because `AsyncImage` cannot set one.
+- **`My Requests` is *not* in the menu** (corrected 2026-10-25). The requests live where they already were: the
+  **Discover** screen's *Requests* button (`SeerrDiscoverView` → `SeerrRequestsView`). What makes that list "mine"
+  is the **server**: the app's proxy forces `requestedBy` to the account's own linked Overseerr id on the
+  `/request` read (`lib/app-seerr-routes.ts`), so a person sees exactly the requests they made — and a caller who
+  happened to hold `MANAGE_REQUESTS` could not widen it. No app change was needed for that; the first pass's menu
+  row (`MyRequestsView`) was removed.
+
+### The sign-out door
+
+`WeFlixSessionController` was a `@State` inside `WeFlixAppGate` and **not in the environment**, so the menu could
+not reach it. The gate now adds `.environment(session)`, and the menu calls the same sequence — one sign-out, one
+implementation.
+
+### Gate (measured, this Mac)
+
+| Target | Command | Result |
+|---|---|---|
+| iOS | `-scheme weflix -destination 'platform=iOS Simulator,id=DD8FBFD3-…'` | **BUILD SUCCEEDED**, 0 errors |
+| tvOS | `-scheme weflix-tvOS -destination 'platform=tvOS Simulator,id=A533891E-…'` | **BUILD SUCCEEDED**, 0 errors |
+| macOS | `-scheme weflix-macOS -destination 'platform=macOS,arch=arm64' CODE_SIGNING_ALLOWED=NO` | **BUILD SUCCEEDED**, 0 errors |
+| Tests | `xcodebuild test -scheme weflix-macOS …` | **TEST SUCCEEDED** |
+
+**Not verified:** an eye and a tap on a device — this Mac has no browser session, no test account and no typing
+tool, so "the menu shows both rows", "a poster opens the title" and "Sign Out returns to the sign-in screen" are
+verified by the code, the builds and the server route's tests, not by a screenshot. Luther's checks: open the
+avatar, see **My Watchlist** and **My Requests**; open the watchlist and see his own posters; sign out and land on
+the sign-in screen.
+
+**Note on the tree:** `Shared/Features/Seerr/SeerrDiscoverViewModel.swift`, `weflixTests/Features/Seerr/` and part
+of `Localizable.xcstrings` were already modified in the working tree (the Seerr "show only what's in the library"
+filter) before this work and are **not** part of it.
+
+
 ## MERGED — production now has the app's server half, so the app works again (2026-10-25, Cline)
 
 **Luther, after the measurement in the entry below:** *"Merge Development → main now and watch weflix.me until it

@@ -4,7 +4,7 @@ import SwiftUI
 struct UserMenuView: View {
     @Environment(SessionManager.self) private var sessionManager
     @Environment(SettingsManager.self) private var settingsManager
-    @Environment(OfflineCoordinator.self) private var offlineCoordinator
+    @Environment(WeFlixSessionController.self) private var weflixSession
     @EnvironmentObject private var coordinator: MainCoordinator
     @Environment(\.dismiss) private var dismiss
 
@@ -25,6 +25,15 @@ struct UserMenuView: View {
                     }
                 }
 
+                NavigationLink {
+                    WatchlistView(onSelectMedia: { media in
+                        dismiss()
+                        coordinator.showMediaDetail(media)
+                    })
+                } label: {
+                    Label("My Watchlist", systemImage: "bookmark.fill")
+                }
+
                 if !settingsManager.interface.displayFavoritesTab {
                     NavigationLink {
                         FavoritesView(
@@ -40,26 +49,23 @@ struct UserMenuView: View {
                 }
             }
 
+            // **Sign out, not a profile switch** (Luther, 2026-10-25): the app holds one WeFlix account, and the
+            // one useful action is the same sequence the signed-in card runs — tell the server, then forget the
+            // account here. `WeFlixSessionController` is handed down by `WeFlixAppGate` for exactly this.
             Section {
-                if sessionManager.profiles.count > 1 {
-                    Button {
-                        dismiss()
-                        sessionManager.requestProfileSelection()
-                    } label: {
-                        Label("common.actions.switchProfile", systemImage: "person.2.circle")
+                Button(role: .destructive) {
+                    Task {
+                        await weflixSession.signOut()
+                        sessionManager.forgetWeFlixAccount()
                     }
-                    .buttonStyle(.plain)
-                    .disabled(offlineCoordinator.isFullyOffline)
-
-                    if offlineCoordinator.isFullyOffline {
-                        Text("offline.menu.switchUnavailable")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    }
+                } label: {
+                    Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
                 }
+                .disabled(weflixSession.isWorking)
             }
         }
         .listStyle(.insetGrouped)
         .navigationTitle(sessionManager.activeProfile?.name ?? String(localized: "tabs.more"))
     }
 }
+

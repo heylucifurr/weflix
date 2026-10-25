@@ -172,19 +172,14 @@ struct SeerrRequestsView: View {
 
     private var optionsMenu: some View {
         Menu {
-            Picker("seerr.requests.options.type", selection: $viewModel.query.mediaType) {
-                ForEach(SeerrRequestMediaFilter.allCases) { filter in
-                    Text(LocalizedStringKey(filter.titleKey)).tag(filter)
-                }
-            }
-
+            // Only what Overseerr's `/request` can honour: a status filter and a sort. The media-type and
+            // oldest-first controls were removed (2026-10-25) — that route rejects `mediaType` and `sortDirection`
+            // outright, so offering them would be a button that dies on tap.
             Picker("seerr.requests.options.sort", selection: $viewModel.query.sort) {
                 ForEach(SeerrRequestSort.allCases) { sort in
                     Text(LocalizedStringKey(sort.titleKey)).tag(sort)
                 }
             }
-
-            Toggle("seerr.requests.options.oldestFirst", isOn: $viewModel.query.isAscending)
         } label: {
             #if os(tvOS)
                 Label("seerr.requests.options.title", systemImage: optionsIcon)
@@ -196,9 +191,7 @@ struct SeerrRequestsView: View {
     }
 
     private var optionsIcon: String {
-        let isFiltered = viewModel.query.mediaType != .all
-            || viewModel.query.sort != .added
-            || viewModel.query.isAscending
+        let isFiltered = viewModel.query.sort != .added
         return isFiltered ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle"
     }
 

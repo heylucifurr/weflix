@@ -60,6 +60,12 @@ enum WeFlixServer {
     /// `POST` — a short-lived ticket for the **player**'s media URLs, which cannot carry a header (S5).
     static let streamTicketPath = "api/app/stream-ticket"
 
+    /// `GET` — the signed-in account's **My Watchlist**, from WeFlix's own database (2026-10-25).
+    ///
+    /// The list is the account's own `watchlist_entries` rows; the web reads the same store through
+    /// `/api/plex-actions/watchlist` with its cookie, and this is the app's door to it with the device token.
+    static let watchlistPath = "api/app/watchlist"
+
     /// The **gateway**: the Plex-shaped reads the app makes of this server, which holds the Plex token and does the
     /// reading on the account's behalf (PHASE APP-GATEWAY). One path, because the app talks to one host.
     static let gatewayPath = "api/plex"

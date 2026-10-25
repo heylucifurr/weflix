@@ -39,27 +39,6 @@ enum SeerrRequestStatusFilter: String, CaseIterable, Identifiable {
     }
 }
 
-enum SeerrRequestMediaFilter: String, CaseIterable, Identifiable {
-    case all
-    case movie
-    case tv
-
-    var id: String {
-        rawValue
-    }
-
-    var titleKey: String {
-        switch self {
-        case .all:
-            "seerr.requests.filter.all"
-        case .movie:
-            "seerr.requests.filter.movies"
-        case .tv:
-            "seerr.requests.filter.series"
-        }
-    }
-}
-
 enum SeerrRequestSort: String, CaseIterable, Identifiable {
     case added
     case modified
@@ -80,9 +59,7 @@ enum SeerrRequestSort: String, CaseIterable, Identifiable {
 
 struct SeerrRequestQuery: Hashable {
     var status: SeerrRequestStatusFilter = .all
-    var mediaType: SeerrRequestMediaFilter = .all
     var sort: SeerrRequestSort = .added
-    var isAscending = false
 
     var isDefault: Bool {
         self == SeerrRequestQuery()

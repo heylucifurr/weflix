@@ -13,9 +13,13 @@ struct SettingsView: View {
                     NavigationLink("settings.accounts.title") {
                         AccountsSettingsView()
                     }
-                    NavigationLink("profiles.title") {
-                        ProfilesSettingsView()
-                    }
+                    // Profiles are a Plex Home / local-profile idea the WeFlix client no longer manages from
+                    // Settings on iPhone (Luther, 2026-10-25). The Mac keeps the entry.
+                    #if os(macOS)
+                        NavigationLink("profiles.title") {
+                            ProfilesSettingsView()
+                        }
+                    #endif
                 }
             }
 

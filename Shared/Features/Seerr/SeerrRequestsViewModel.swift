@@ -291,9 +291,7 @@ final class SeerrRequestsViewModel {
                 take: take,
                 skip: 0,
                 filter: query.status.rawValue,
-                mediaType: query.mediaType.rawValue,
                 sort: query.sort.rawValue,
-                sortDirection: query.isAscending ? "asc" : "desc",
             )
             guard generation == loadGeneration else { return }
             requests = response.results
@@ -309,9 +307,7 @@ final class SeerrRequestsViewModel {
             take: pageSize,
             skip: skip,
             filter: query.status.rawValue,
-            mediaType: query.mediaType.rawValue,
             sort: query.sort.rawValue,
-            sortDirection: query.isAscending ? "asc" : "desc",
         )
     }
 
