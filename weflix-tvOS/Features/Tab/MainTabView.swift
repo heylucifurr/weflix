@@ -166,6 +166,7 @@ struct MainTabView: View {
             }
         }
         .environmentObject(coordinator)
+        .handlesPlaybackFailures($coordinator.playbackFailure)
         .mediaCardActions(registry: registry, presenter: coordinator, showMedia: coordinator.showMediaDetail)
         .task {
             sharePlayCoordinator.configurePlaybackPresenter(coordinator)

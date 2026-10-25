@@ -1,3 +1,81 @@
+## FIX — a Play that cannot start now says so; and the reason every Play did nothing (2026-10-25, Cline)
+
+**Luther:** *"all is working now but clicking Play nothing happens"* → asked which tap, *"on ios every play button
+is not working."*
+
+### The cause — and it is not in this repository
+
+Traced end to end, because the symptom was total: every Play button on every screen.
+
+```
+DetailActionsRow/Seerr header → PlaybackLauncher.play(...)
+  → services.playback.queue(...)              (PlexMediaServices.queue)
+  → PlayQueueRepository.createQueue(...)      → **POST /playQueues**
+  → the WeFlix gateway refuses it             → PlaybackLauncher catches, debugPrint, returns → nothing at all
+```
+
+`/playQueues` was the **one call in the playback path the WeFlix gateway did not carry**: `app/api/plex/[...path]/route.ts`
+exported `GET` and `PUT` only, and judged every non-GET against a write allow-list of a single path
+(`/library/parts/<id>`). Every other call was already there — `/library/metadata/<key>`, the S5 transcode trio,
+`/api/video`, `/api/transcode`. One refused call, every Play, every platform — and `PlaybackLauncher` printed the
+error and returned, so the refusal reached nobody. That silence is this app's half of the bug.
+
+### What this repository changed
+
+| File | What |
+|---|---|
+| `Shared/Features/Player/PlaybackLauncher.swift` | `PlaybackPresenting` gained `reportPlaybackFailure(_:)`, and the queue's `catch` now calls it instead of only `debugPrint`ing. The error still goes to Sentry. |
+| `Shared/Features/MainCoordinator.swift` | `PlaybackFailure` and `.handlesPlaybackFailures(_:)` live here, beside the state they draw — **deliberately not in a file of their own.** A new `Shared/` file would need an entry in the tvOS target's `Shared` allow-list, and that list is inside `weflix.xcodeproj/project.pbxproj`, which is carrying **Luther's in-flight signing/rebundle work**. `MainCoordinator.swift` is already in the allow-list, so this commit touches no file that is his. It also publishes `playbackFailure`. |
+| `weflix-macOS/Features/AppModel.swift` | The Mac's own conformer publishes `playbackFailure` too. |
+| `weflix-iOS`/`weflix-tvOS` `MainTabView.swift`, `weflix-macOS/Features/Main/MainView.swift` | The alert is applied alongside the existing `.handlesExternalPlaybackCallbacks`. |
+| `Localizable.xcstrings` | `player.playbackFailed.title` ("Couldn't play this title") and `player.playbackFailed.message`, en/fr/zh-Hans. |
+
+### The server half (Luther approved both)
+
+Written and green in the **server** repository — a `POST` export on the generic gateway, `/playQueues` judged by its
+own path and query rules (`type, uri, own, shuffle, repeat, continuous`), the client's synthetic
+`server://weflix-gateway…` replaced by the real `PLEX_MACHINE_IDENTIFIER`, and the same library check the metadata
+read makes run on the queued title. The full record is the top entry of
+`plex-custom-frontend/checkpoints/CURRENT.md`. It is committed and **pushed**: the beta redeployed on that push and
+serves it (measured — `/api/health` on `e39c19b`). **Production does not**, until `Development` is merged to
+`Master`, which is Luther's call. The app itself is committed here but not pushed.
+
+### Gate (measured, this Mac)
+
+| Target | Command | Result |
+|---|---|---|
+| iOS | `-scheme weflix -destination 'platform=iOS Simulator,id=DD8FBFD3-…' -derivedDataPath build/DerivedDataIOS` | **BUILD SUCCEEDED**, 0 errors |
+| tvOS | `-scheme weflix-tvOS -destination 'platform=tvOS Simulator,id=A533891E-…' -derivedDataPath build/DerivedDataTV` | **BUILD SUCCEEDED**, 0 errors |
+| macOS | `-scheme weflix-macOS -destination 'platform=macOS,arch=arm64' -derivedDataPath build/DerivedData` | **BUILD SUCCEEDED**, 0 errors |
+| Tests | `xcodebuild test -scheme weflix-macOS …` | **TEST SUCCEEDED**, 420 cases passed, 0 failures |
+
+The three builds used `CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO` (macOS as before, and now iOS/tvOS too:
+without it this machine fails on **a SwiftPM bundle's Finder detritus** —
+`AetherEngine_AetherEngine.bundle: resource fork, Finder information, or similar detritus not allowed` — an
+environment condition, not this change; the same build without signing compiles and links cleanly).
+
+**Recorded, not hidden:** the first full test run had two `PauseScreenPresentationTests` failures — each case took
+~21 s under the build's load. In isolation that suite is **TEST SUCCEEDED** (0.3 s per case) and the full re-run is
+**TEST SUCCEEDED** with 420 passes. Timing flakiness under load, not a behavioural failure.
+
+**Luther's uncommitted work is untouched, by construction.** The bundle-id/app-group rename, the entitlements edits
+and the **signing/team changes in `weflix.xcodeproj/project.pbxproj`** are his and are **not in this commit**. That
+is why `PlaybackFailure` was not given a file of its own: a new `Shared/` file needs an entry in the tvOS target's
+`Shared` allow-list, which lives in that same `project.pbxproj`. `MainCoordinator.swift` is already named there, so
+this change needs no project edit at all — the file's `git diff` is, character for character, the state he left it
+in (28 insertions, 19 deletions, all his).
+
+### Not verified
+
+- **The fix end to end.** The gateway change is not deployed (nothing is pushed), and this machine cannot drive a
+  tap, so "press Play and the film starts" is unmade — it is exactly the confirmation `checkpoints/CURRENT.md`
+  has carried since A1–A5 (lines 675, 677).
+- The alert has never been seen: it needs a failed queue, which needs the un-deployed server half.
+- `/:/timeline` is still refused by the gateway, so watch state will not save through it. Flagged for the next
+  step, not changed here.
+
+
+
 ## CHANGE — the brand colour is WeFlix red `#E50914`, not the pink (2026-10-25, Cline)
 
 **Luther:** *"can you change the main accent color to e50914 instead of that pink looking"*

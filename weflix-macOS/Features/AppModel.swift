@@ -242,6 +242,13 @@ final class AppModel: PlaybackPresenting {
         await ExternalPlayerApps.open(request)
     }
 
+    /// The sentence for a play that could not be started, or `nil` (`PlaybackPresenting.reportPlaybackFailure`).
+    var playbackFailure: PlaybackFailure?
+
+    func reportPlaybackFailure(_ message: String) {
+        playbackFailure = PlaybackFailure(message: message)
+    }
+
     func showLivePlayer(context: LiveTVLaunchContext, services: MediaServices) {
         playerPresentation = PlayerPresentation(liveTVContext: context, services: services)
     }

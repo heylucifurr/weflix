@@ -16,6 +16,9 @@ protocol PlaybackPresenting: AnyObject {
     #endif
     /// Whether the external app opened.
     func openExternalPlayer(_ request: ExternalLaunchRequest) async -> Bool
+    /// A play could not be started — the queue could not be built, or the server refused it. It is shown to the
+    /// person, because a Play that does nothing is indistinguishable from a broken app (`PlaybackFailure`).
+    func reportPlaybackFailure(_ message: String)
 }
 
 struct PlaybackLauncher {
@@ -62,6 +65,9 @@ struct PlaybackLauncher {
             guard !Task.isCancelled, !error.isCancellation else { return }
             debugPrint("Failed to create play queue:", error)
             ErrorReporter.capture(error)
+            // A Play that could not start says so. It used to return in silence here, which is why a refused
+            // queue looked like a dead button (2026-10-25).
+            coordinator.reportPlaybackFailure(String(localized: "player.playbackFailed.message"))
         }
     }
 

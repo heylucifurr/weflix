@@ -10283,6 +10283,50 @@
         }
       }
     },
+    "player.playbackFailed.message" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "WeFlix couldn't start playback. Please try again."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "WeFlix n’a pas pu démarrer la lecture. Veuillez réessayer."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "WeFlix 无法开始播放，请重试。"
+          }
+        }
+      }
+    },
+    "player.playbackFailed.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't play this title"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de lire ce titre"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法播放此内容"
+          }
+        }
+      }
+    },
     "player.quality.fallback" : {
       "localizations" : {
         "en" : {

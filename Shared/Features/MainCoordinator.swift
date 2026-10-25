@@ -67,6 +67,8 @@ final class MainCoordinator: ObservableObject, PlaybackPresenting {
     @Published var selectedMediaServices: MediaServices?
     @Published var selectedLiveTVContext: LiveTVLaunchContext?
     @Published var playerNotice: String?
+    /// The sentence for a play that could not be started, or `nil` — set by `reportPlaybackFailure`.
+    @Published var playbackFailure: PlaybackFailure?
     #if !os(tvOS)
         @Published var selectedLocalPlayback: LocalPlaybackRequest?
     #endif
@@ -363,6 +365,10 @@ final class MainCoordinator: ObservableObject, PlaybackPresenting {
         await ExternalPlayerApps.open(request)
     }
 
+    func reportPlaybackFailure(_ message: String) {
+        playbackFailure = PlaybackFailure(message: message)
+    }
+
     func showLivePlayer(context: LiveTVLaunchContext, services: MediaServices) {
         selectedLiveTVContext = context
         selectedMediaServices = services
@@ -398,3 +404,44 @@ final class MainCoordinator: ObservableObject, PlaybackPresenting {
         }
     }
 }
+
+/// A play that could not be started: one sentence, shown once, dismissed.
+///
+/// **Why this exists (2026-10-25).** Every Play in the app goes through `PlaybackLauncher`, which builds a play
+/// queue **first** and, when that call failed, only `debugPrint`ed and returned. A refused or broken playback was
+/// therefore indistinguishable from a dead button — Luther's report, *"on iOS every play button is not working"*,
+/// was this silence. The queue's own refusal was a server-side gap (the WeFlix gateway had no `POST /playQueues`);
+/// the part that is this app's is the silence, and it is what this fixes. The error itself still goes to Sentry.
+///
+/// It lives beside the coordinator that publishes it rather than in a file of its own, because everything that
+/// draws it is `MainCoordinator`'s own state. (`PlaybackLauncher.swift`, the other candidate, is in the tvOS
+/// target's `Shared` allow-list too — but a new file would have needed an edit to `project.pbxproj`, which is
+/// carrying Luther's in-flight signing work.)
+struct PlaybackFailure: Identifiable, Equatable {
+    let id = UUID()
+    let message: String
+}
+
+private struct PlaybackFailureAlert: ViewModifier {
+    @Binding var failure: PlaybackFailure?
+
+    func body(content: Content) -> some View {
+        content.alert(item: $failure) { failure in
+            Alert(
+                title: Text("player.playbackFailed.title"),
+                message: Text(failure.message),
+                dismissButton: .default(Text("common.actions.done")),
+            )
+        }
+    }
+}
+
+extension View {
+    /// Shows the sentence for a play that could not be started
+    /// (`PlaybackPresenting.reportPlaybackFailure(_:)`). One implementation, applied by each platform's root, so
+    /// a Play that could not start reads the same on iOS, tvOS and the Mac.
+    func handlesPlaybackFailures(_ failure: Binding<PlaybackFailure?>) -> some View {
+        modifier(PlaybackFailureAlert(failure: failure))
+    }
+}
+
