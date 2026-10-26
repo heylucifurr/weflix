@@ -15,6 +15,18 @@ struct WeFlixSignInView: View {
     @Bindable var session: WeFlixSessionController
     @FocusState private var focusedField: Field?
 
+    /// The line under **Sign in** — one of `SignInGreeting.all`, drawn once when this screen is built.
+    ///
+    /// Held here rather than asked for in `body` so it cannot change while a person is typing: `body` runs on
+    /// every keystroke, and a greeting re-rolled under the field would be text moving on its own. Because
+    /// `WeFlixAppGate` builds this view fresh each time it returns to `.signedOut`, a new line is drawn for every
+    /// visit, which is the "changes every time" this is for.
+    ///
+    /// `SignInGreeting.current` **reads** without moving the rotation — the step on happens in `onAppear` below,
+    /// once per appearance. Doing it here instead would run on every re-render, because SwiftUI re-creates this
+    /// struct each time its parent's body runs.
+    @State private var greeting = SignInGreeting.current
+
     private enum Field: Hashable {
         case identifier
         case password
@@ -36,6 +48,9 @@ struct WeFlixSignInView: View {
         }
         .scrollBounceBehavior(.basedOnSize)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // Steps the rotation on for the *next* visit, once per appearance — not once per re-render. The line on
+        // screen is already `greeting`, captured when this view was built, so this cannot move it.
+        .onAppear { SignInGreeting.advance() }
     }
 
     private var header: some View {
@@ -52,7 +67,7 @@ struct WeFlixSignInView: View {
                 .foregroundStyle(.textPrimary)
                 .multilineTextAlignment(.center)
 
-            Text("Use your WeFlix account.")
+            Text(greeting)
                 .font(.bodyText)
                 .foregroundStyle(.textSecondary)
                 .multilineTextAlignment(.center)

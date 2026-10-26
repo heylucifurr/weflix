@@ -1,3 +1,214 @@
+## FEATURE — Discover is Luther's four rails, and every heading opens the whole rail (2026-10-26, Cline)
+
+**Luther:** *"ON DISCOVER. Trending / Popular Movies / Popular TV Shows / Upcoming Movies & TV Shows"* — and every
+heading clickable, *"similar home where Recently Added in Movies is clickable and it loads more list"*.
+
+| # | Heading | What changed |
+|---|---|---|
+| 1 | Trending | unchanged |
+| 2 | Popular Movies | unchanged |
+| 3 | **Popular TV Shows** | copy was "Popular TV" |
+| 4 | **Upcoming Movies & TV Shows** | **two** rails became one — Upcoming Movies + Upcoming Series |
+
+It is **four**, not the five of his first message; his caps list is the authority. iOS, macOS **and tvOS** show the same
+four in the same order.
+
+**Clickable headings reuse Home's own mechanism.** `MediaHubSection(onViewAll:)` is what Home's "Recently Added in …"
+rows already use — the title plus a chevron and the `hub.viewAll` label — so Discover did not grow a second pattern.
+The heading opens `SeerrDiscoverRailView`: a `PosterGrid` of `SeerrMediaCard` that pages as the last card is reached,
+mirroring `HubDetailView` (skeleton, empty and error states, `hub.empty`, `hub.error.loadFailed`).
+
+**The filter is untouched.** He chose *"Keep the filter exactly as it is — only add the clickable headers"*, so
+`inLibraryOnly` stays on the rails **and** on the opened screen — a heading over a filtered rail must not open an
+unfiltered one. `SeerrDiscoverLibraryFilterTests` is unchanged.
+
+**One description of a rail, three readers.** `SeerrDiscoverRail` (new) names the four rails, their titles and their
+queries; `SeerrDiscoverViewModel.fetch` is now a loop over `allCases`, the screen draws `allCases`, and a heading's
+screen pages `the same case`. Before, the five queries were written inline in `fetch`, and the heading's screen would
+have needed its own copy — two places that must agree, which is exactly how a heading ends up opening something else.
+
+| Decision (routine — taken, not asked) | Why |
+|---|---|
+| The two upcoming routes are merged **soonest first**, undated last | "Upcoming" is a question about *when*; Seerr orders each route by popularity, so neither arrives in date order. Undated **last**, not first, so it cannot bury the nearest release. |
+| The merge is **stable** (equal dates keep route order) | `sorted` is not stable in Swift, so equal dates would reshuffle on every refresh. Same offset trick `HomeAggregation.sortedByLastViewed` uses. |
+| A merged page asks **both** routes, and `lastPage = max(...)` | With 20 pages of films and 3 of series, page 4 is still films and must not be cut off at the series' end. |
+| The two routes are asked **one after the other**, not `async let` | A child task is a `@concurrent` context and `SeerrMedia`'s `Decodable` conformance is main-actor isolated — `async let` warned on every build, and is an error in Swift 6. |
+| `SeerrDiscoverRepository` took a `baseURL` parameter | Only so a test can point it at the stubbed session — the same rule and wording as `SeerrNetworkClient`. |
+| The repo is a **required** parameter of `SeerrDiscoverRail.page` | A default constructing `SeerrDiscoverRepository()` is evaluated in a *nonisolated* context and warned on every build (that initialiser is main-actor isolated because its base URL reads `WeFlixServer`). |
+
+### The four defects this step found — measured, each worth keeping
+
+1. **`StubURLProtocol` held one handler per *process*.** It had exactly one user, so nobody noticed until a second
+   suite stubbed a session: Swift Testing runs suites **in parallel**, the two overwrote each other's handler, and
+   *both* suites failed while answering the other's request — including two tests in `WeFlixAuthClientTests` that had
+   been passing. Handlers are keyed by **host** now (`session(_:host:)`; `canInit` claims a host only while one is
+   registered), which made the pre-existing tests pass again and gave this suite a host of its own
+   (`weflix.rail.test`). **The second time this session that a green suite was hiding a real defect.**
+2. **`SeerrMediaStatus` is an `Int` enum** (`available = 5`, `pending = 2`). The first version of the test fixture
+   emitted `"status":"available"`, which fails the *whole page* with a decoding error: six tests failed with empty
+   lists and an error label while the app itself was fine. The fixture reads `SeerrMediaStatus.available.rawValue`
+   now, so a renumbering cannot quietly break it. **The failure looked exactly like a product bug and was not one.**
+3. **`repeat { … } while a, b, c` does not compile.** A `repeat`-`while` takes a single *expression*, not the
+   condition-list that `if`, `guard` and `while` take. `&&` it is.
+4. **A namespaced key with no catalogue value is drawn *as the key*.** So `integrations.seerr.discover.popularTVShows`
+   and `…upcomingMoviesAndTVShows` were added to `Localizable.xcstrings` **with English values** rather than left to
+   extraction, and their `fr`/`zh-Hans` are composed from the strings already there (`Séries populaires`;
+   `即将上映的电影` + `即将播出的剧集`) rather than invented. (Also re-measured: `String(localized:)` on a runtime key
+   *does* resolve — the same mechanism the sign-in greeting uses.)
+
+### Gate (measured, this Mac)
+
+| Target | Result |
+|---|---|
+| iOS simulator | **BUILD SUCCEEDED, 0 errors** — 11 warnings, all pre-existing, none in the new or changed Seerr files |
+| tvOS simulator | **BUILD SUCCEEDED, 0 errors** (`id=A533891E-…`; the name alone is ambiguous — see the entry below) |
+| macOS | **BUILD SUCCEEDED, 0 errors** |
+| Tests (macOS scheme) | **TEST SUCCEEDED — 448 passed, 0 failed, 4 skipped** (`passedTests: 448` in the run's own `.xcresult`; the four skips are the live-auth tests). **14 are new** (`SeerrDiscoverRailTests`), which accounts for the whole rise from 434: 434 + 14 = 448 exactly. |
+| Localisation | All four headings carry `en`, `fr` and `zh-Hans`; the catalogue parses, 967 keys. |
+
+### NOT verified — and it matters
+
+- **No eye has seen the Discover tab.** The iPhone 17 Pro simulator is **signed out** and I have no credentials, so the
+  four rails, the new headings and the sheet are verified by build, by 14 tests and by the catalogue — **not by a
+  screenshot**. That is the first thing to check.
+- **tvOS shows the same four titles in its own layout** (a hero plus a carousel, no tappable headings — its discover
+  screen is a different design). Only the rail set and its order were aligned.
+
+### Home was asked about too — and it is blocked on the server, not on the app
+
+Luther listed six Home rows: *Continue Watching · New & Popular · Recently Added in Movies · Recently Added in TV
+Shows · Recently Added in Anime · Leaving Soon*.
+
+- **Nothing was changed on Home.** `git status` shows nothing under `Shared/Features/Home/`, `HomeView`,
+  `HomeRowSectionView` or `MainTabView`; the only Home mentions I added are comments in the new Discover files.
+- **The order is already his to set**, per profile: Settings → Home rows (`HomeRowsSettingsView`,
+  `HomeRowPreferences.orderedRowIDs`).
+- **"New & Popular" and "Leaving Soon" do not exist anywhere in the app** — no strings, no handling — and **nothing
+  hides them**: `HomeAggregation.merge` turns every hub the server sends into a row (`home.rows.filter { $0.kind ==
+  .hub }`) with no title filter. So those two are absent because **the server is not sending those hubs**.
+  Surfacing them needs a server-side change, or a decision to synthesise them in the app. **Waiting on Luther.**
+
+
+
+## FIX — the sign-in line rotates, and the sign-in icon is **not** the app icon (2026-10-26, Cline)
+
+Two questions from Luther, both about the WeFlix sign-in screen: one about a file, one about a sentence.
+
+### 1. *"on the sign in page there is a weflix icon in there.. where to change it?"* → *"what i want is change only the sign in icon"*
+
+The answer is **two different files**, and he had been editing the wrong one:
+
+| What he was looking at | Where it is actually drawn |
+|---|---|
+| The tile on the sign-in screen | `Image("Icon")` in `WeFlixSignInView`'s `header` → `weflix-iOS/Assets.xcassets/**Icon.imageset**` |
+| The icon on the phone's home screen | `AppIcon.appiconset` — referenced by `CFBundleIconName` in the built `Info.plist` |
+
+`AppIcon.appiconset` images **cannot be loaded by `Image(_:)` at all**, which is why the sign-in tile never moved when
+he changed them. Measured from the built app: `Assets.car` holds both (`AppIcon | Icon Image | phone` and
+`Icon | Image | universal`), and the springboard icon extracted from the bundle (`AppIcon60x60@2x.png`) was his
+WEFLIX wordmark while the sign-in PNG was still the plain `W`. **No code change was needed** — the correct file is the
+one he replaced himself while this was being written.
+
+### 2. *"can we change this dynamically? like not static? like it change everytime?"*
+
+He named three lines: *Welcome back. Your shows are waiting.* · *Pull up a seat. Movie night starts here.* · *Good to
+see you again.* The fixed literal `"Use your WeFlix account."` is gone.
+
+`SignInGreeting` (**new**, `Shared/Features/Auth/WeFlixAccount/SignInGreeting.swift`) holds `all` — the pool — plus
+`current` (the line to show, **read-only**) and `advance()` (steps the rotation on). `WeFlixSignInView` holds **one**
+line in `@State` and draws it in the same place, same font, same grey:
+
+```swift
+@State private var greeting = SignInGreeting.current   // reads; does not move the rotation
+...
+Text(greeting)
+...
+.onAppear { SignInGreeting.advance() }                 // steps on for the *next* visit
+```
+
+**`SignInGreeting.all` is the whole feature**: add a line there and it joins the rotation on all three platforms,
+with nothing else to edit. (The file is new under `Shared/`, so the **tvOS allow-list** in `project.pbxproj`
+(`PBXFileSystemSynchronizedBuildFileExceptionSet`) needed its one sorted line — `Features/Auth/WeFlixAccount/SignInGreeting.swift`
+before `.../WeFlixAppGate.swift`. Without it the file compiles on iOS and macOS and is missing on tvOS.)
+
+| Decision (routine — taken, not asked) | Why |
+|---|---|
+| The cursor lives **outside** the view (`private static var cursor`) | `WeFlixAppGate` builds `WeFlixSignInView` fresh every time it returns to `.signedOut`, so a cursor in the view would start over on every visit and could repeat — the exact "static" look this replaced. Held outside, each visit is guaranteed a line the person did not just read; a plain `randomElement()` repeats one time in three. |
+| **Read and advance are two different calls** (`current` / `advance()`), and `advance()` runs from `onAppear` | The first version advanced from the `@State` property initialiser — `@State private var greeting = SignInGreeting.next()`. SwiftUI re-creates a view *struct* on every parent re-render, so that initialiser runs **on every keystroke in the form**: the cursor raced far ahead of the line on screen and "never the one just shown" quietly stopped being true. See below — this was a real defect, found after the fact, not a style choice. |
+| The cursor steps by a random `1 ..< count`, `% count` | So it can neither stand still nor follow a visible order. A one-line pool is a no-op rather than a crash. |
+| The line is drawn in `@State`, not asked for in `body` | `body` runs on every keystroke; a greeting re-rolled under the field would be text moving on its own. |
+| No animation at all | The line changes as the screen is *built*, so there is nothing to animate — and therefore nothing to keep away from Reduce Motion. |
+| The three lines are English literals used as their own keys | The convention this screen already followed, so there is no second place to keep a key and its wording in step. |
+
+### Gate (measured, this Mac)
+
+| Target | Result |
+|---|---|
+| iOS simulator | **BUILD SUCCEEDED, 0 errors** — no warning raised in either new/edited file (the 13 reported are all pre-existing: `WeFlixAuthClient`, `WeFlixAppGate`, `AccountStore`, …) |
+| tvOS simulator | **BUILD SUCCEEDED, 0 errors** |
+| macOS | **BUILD SUCCEEDED, 0 errors** |
+| Tests (macOS scheme) | **TEST SUCCEEDED, 0 failed, 4 skipped** — read from the run's own `.xcresult`: **434** test cases on the device (`skippedTests: 4` = the four `WeFlixLiveAuthTests`, which need live credentials), which the summary also aggregates as **408** unique tests plus *"10 tests ran with dynamic parameters — 36 test runs"*. Four are new (`SignInGreetingTests`): `the rotation has more than one line to rotate through`, `no two lines in the rotation say the same thing` (pairwise — see below), `reading the line never moves the rotation` (50 reads change nothing), `advancing always leaves a different line` (30 steps, none equal to the one before). **The 434 reconciles with the previous run's 433 as exactly +1**: three tests were replaced by these four. The earlier entry's 429 was a different metric and is not comparable. |
+| On a screen | **verified** — installed on a **fresh** iPhone Air simulator (never signed in, so it reaches the sign-in screen without signing Luther out of his iPhone 17 Pro). Three launches gave **two different lines**: *Welcome back. Your shows are waiting.*, then *Pull up a seat. Movie night starts here.*, then *Pull up a seat. Movie night starts here.* (Two consecutive **launches** matching is expected — see "Not verified" below.) |
+
+### Two things measured that cost a failed run each — worth keeping
+
+- **`LocalizedStringKey` is `Equatable` but not `Hashable`.** The first version of the distinctness test used
+  `Set(SignInGreeting.all)` and the test target failed to compile on it. The check is pairwise now, and the comment
+  in the test says why.
+
+### The defect this step found in itself — a `@State` initialiser with a side effect (2026-10-26)
+
+Worth its own heading because it is the kind of bug that passes every test and only shows as "hmm, it's the same
+line again". Three consecutive launches all printed *Welcome back. Your shows are waiting.* — which is a 1-in-9
+coincidence, and chasing it found this:
+
+```swift
+// what it was
+@State private var greeting = SignInGreeting.next()   // carried a side effect: the cursor moved
+```
+
+SwiftUI re-creates a view **struct** on every parent re-render, so that initialiser ran on every keystroke in the
+form, moving the cursor each time while `@State` kept only the first line. The cursor therefore no longer tracked the
+line on screen, and "never the one just shown" stopped holding — the rotation had advanced dozens of times between
+what was displayed and what came next. **The fix is the split:** `current` reads, `advance()` steps, and only
+`onAppear` may step. `reading the line never moves the rotation` now pins exactly that, so the regression cannot come
+back silently.
+
+Screen recording of the corrected behaviour (three launches, fresh simulator): *Welcome back…*, *Pull up a seat…*,
+*Pull up a seat…* — the last two coincide because a **launch** re-randomises the starting cursor; the guarantee that
+holds is *per appearance within a run*, which is on screen above and pinned by `advancing always leaves a different
+line`.
+- **`weflix-tvOS` needs an explicit `-destination id=` on this machine.** With three "Apple TV 4K (3rd generation)"
+  simulators (`-showdestinations`: two at `OS:27.0`, one at 1080p) the name alone fails before compiling —
+  *"Unable to find a device matching the provided destination specifier"*, exit 70. Use
+  `id=A533891E-0975-4902-9057-0F1E30BEDF90`; `CLAUDE.md`'s name-only form is not enough here.
+- **A red herring, recorded so it is not misread later:** `PauseScreenPresentationTests/an interaction dismisses and
+  presents again after another delay` failed once at **137.9 s** while two builds and a simulator boot ran in
+  parallel, and **passes in 0.618 s in isolation** (re-run: `TEST SUCCEEDED`). It asserts on a real
+  `Task.sleep(for: 300 ms)`, so a starved main actor misses the window. Nothing to do with this change.
+
+### Not verified, and left alone on purpose
+
+- **The three new lines are registered and translatable — corrected after a later build.** My first reading of
+  `Localizable.xcstrings` was taken too early: it was still 963 keys with the three lines **absent** and
+  `"Use your WeFlix account."` present. A later build ran the string-catalog extraction, and the final state is
+  **965 keys**: all three greetings **added** with auto-generated comments (`"Good to see you again." : "A greeting to
+  show when the user signs in."`, and so on) and the now-unused `"Use your WeFlix account."` **pruned**. So the
+  extractor *does* reach `[LocalizedStringKey]` array literals, and nothing had to be hand-edited. **The lesson
+  recorded for next time: read the catalogue after the last build, not after the first.**
+- **They have no `fr` or `zh-Hans` yet.** The new entries carry a comment and no `localizations`, so a French or
+  Chinese device shows the English line — the same as the sentence they replaced, which had no translations either.
+  942 of the 965 keys do carry `fr`, so translating these three is the outstanding follow-up.
+- **The "never repeats" guarantee holds within a run.** A **fresh launch** re-randomises the starting cursor, so two
+  launches can coincide (one time in three). Persisting the cursor is a one-line change if he wants it strict.
+- **The line changes when the screen is reached**, not on a timer while it is on screen. He said *"everytime"*, which
+  reads as *every visit*; a visible timed rotation (`Motion.ambient`, as `LibraryTileGrid` does for artwork) is the
+  alternative if that is what he meant.
+- Nothing was committed. The working tree also carries **his** in-flight work (the new `Icon.imageset` PNGs and
+  `AppIcon`, `TopShelfModels.swift`, `WeFlixWatchActivity.swift`, the `Info.plist`/entitlements edits), so per the
+  `d4a6370` lesson nothing was staged and no bare commit was made.
+
+
 ## FIX — the type pill now shows it is on, the Folder pill is gone, and the technical filters are hidden (2026-10-25, Cline)
 
 Three things from Luther, all about the library row:

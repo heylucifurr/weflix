@@ -3,8 +3,16 @@ import Foundation
 final class SeerrDiscoverRepository {
     private let client: SeerrNetworkClient
 
-    init(session: URLSession = .shared) {
-        client = SeerrNetworkClient(session: session)
+    /// - Parameters:
+    ///   - baseURL: defaults to the app's one requests base (`WeFlixServer.seerrBaseURL`). **Only a test passes
+    ///     anything else** — same rule and same wording as `SeerrNetworkClient`, so a stubbed session can be
+    ///     pointed at `https://weflix.test` and nothing else in the app can retarget the requests routes.
+    ///   - session: a test's stubbed session; the app uses the shared one.
+    init(
+        baseURL: URL = WeFlixServer.seerrBaseURL,
+        session: URLSession = .shared,
+    ) {
+        client = SeerrNetworkClient(baseURL: baseURL, session: session)
     }
 
     func getTrending(page: Int) async throws -> SeerrPaginatedResponse<SeerrMedia> {

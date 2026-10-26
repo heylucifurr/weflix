@@ -106,11 +106,15 @@ struct SeerrDiscoverView: View {
 
     @ViewBuilder
     private var railsContent: some View {
+        // The same four rails the iOS and macOS Discover screens show, in the same order (2026-10-26): the two
+        // upcoming routes are one rail now, so there is no separate "Upcoming Series" heading.
         rail(String(localized: "integrations.seerr.discover.trending"), items: viewModel.trending)
         rail(String(localized: "integrations.seerr.discover.popularMovies"), items: viewModel.popularMovies)
-        rail(String(localized: "integrations.seerr.discover.upcomingMovies"), items: viewModel.upcomingMovies)
-        rail(String(localized: "integrations.seerr.discover.popularTV"), items: viewModel.popularTV)
-        rail(String(localized: "integrations.seerr.discover.upcomingTV"), items: viewModel.upcomingTV)
+        rail(String(localized: "integrations.seerr.discover.popularTVShows"), items: viewModel.popularTVShows)
+        rail(
+            String(localized: "integrations.seerr.discover.upcomingMoviesAndTVShows"),
+            items: viewModel.upcomingMoviesAndTVShows,
+        )
 
         if viewModel.isLoading, !viewModel.hasContent {
             RailsSkeleton(showsLabels: settingsManager.interface.showsCardLabels)
@@ -171,7 +175,7 @@ struct SeerrDiscoverView: View {
         if let media = viewModel.popularMovies.first {
             return media
         }
-        return viewModel.popularTV.first
+        return viewModel.popularTVShows.first
     }
 
     private func updateInitialFocus() {

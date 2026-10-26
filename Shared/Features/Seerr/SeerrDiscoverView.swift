@@ -21,6 +21,9 @@ struct SeerrDiscoverView: View {
         self.onShowRequests = onShowRequests
     }
 
+    /// The rail whose heading is open, if any — the same shape Home uses for its rows (`HomeView.selectedHub`).
+    @State private var selectedRail: SeerrDiscoverRail?
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
@@ -35,14 +38,12 @@ struct SeerrDiscoverView: View {
                 } else {
                     requestsEntry
 
-                    rail(String(localized: "integrations.seerr.discover.trending"), items: viewModel.trending)
-                    rail(String(localized: "integrations.seerr.discover.popularMovies"), items: viewModel.popularMovies)
-                    rail(
-                        String(localized: "integrations.seerr.discover.upcomingMovies"),
-                        items: viewModel.upcomingMovies,
-                    )
-                    rail(String(localized: "integrations.seerr.discover.popularTV"), items: viewModel.popularTV)
-                    rail(String(localized: "integrations.seerr.discover.upcomingTV"), items: viewModel.upcomingTV)
+                    // Luther's four rails, in his order (2026-10-26). The last one is **one** rail over two routes:
+                    // the two upcoming ones are merged, so they are no longer two headings.
+                    rail(.trending, items: viewModel.trending)
+                    rail(.popularMovies, items: viewModel.popularMovies)
+                    rail(.popularTVShows, items: viewModel.popularTVShows)
+                    rail(.upcomingMoviesAndTVShows, items: viewModel.upcomingMoviesAndTVShows)
                 }
 
                 if viewModel.isLoading, !viewModel.hasContent, !searchViewModel.isSearchActive {
@@ -106,6 +107,26 @@ struct SeerrDiscoverView: View {
                 prompt: Text("integrations.seerr.search.placeholder"),
             )
         #endif
+            // The rail's own screen, presented the way Home presents one of its rows: a sheet, with the rail's
+            // title over a grid that pages in more as the last card is reached.
+            .sheet(item: $selectedRail) { rail in
+                NavigationStack {
+                    SeerrDiscoverRailView(
+                        viewModel: SeerrDiscoverRailViewModel(rail: rail),
+                        onSelectMedia: { media in
+                            selectedRail = nil
+                            onSelectMedia(media)
+                        },
+                    )
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("hub.close") {
+                                selectedRail = nil
+                            }
+                        }
+                    }
+                }
+            }
     }
 
     private var requestsEntry: some View {
@@ -134,10 +155,15 @@ struct SeerrDiscoverView: View {
         .buttonStyle(.plain)
     }
 
+    /// One rail: **hidden when it is empty**, and its heading opens the whole rail.
+    ///
+    /// The heading is a `MediaHubSection.onViewAll` button — the title with a chevron beside it and the
+    /// `hub.viewAll` accessibility label — which is the mechanism Home's "Recently Added in …" rows already use.
+    /// Luther pointed at that behaviour, so Discover reuses it rather than growing a second pattern.
     @ViewBuilder
-    private func rail(_ title: String, items: [SeerrMedia]) -> some View {
+    private func rail(_ rail: SeerrDiscoverRail, items: [SeerrMedia]) -> some View {
         if !items.isEmpty {
-            MediaHubSection(title: title) {
+            MediaHubSection(title: rail.title, onViewAll: { selectedRail = rail }) {
                 SeerrMediaCarousel(
                     items: items,
                     showsLabels: settingsManager.interface.showsCardLabels,

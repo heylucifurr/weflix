@@ -8,11 +8,15 @@ final class SeerrDiscoverViewModel {
     @ObservationIgnored private let permissionService = SeerrPermissionService()
     @ObservationIgnored private var refreshGate = AutomaticRefreshGate()
 
+    /// The four rails, one list each — **exactly the rails `SeerrDiscoverRail` names**, so the screen, a heading and
+    /// the screen a heading opens all read the same description of what a rail is.
+    ///
+    /// (Until 2026-10-26 there were five: the two upcoming routes were separate. They are merged now, so
+    /// `upcomingMoviesAndTVShows` is one list built from both routes — which is why it costs two requests.)
     var trending: [SeerrMedia] = []
     var popularMovies: [SeerrMedia] = []
-    var popularTV: [SeerrMedia] = []
-    var upcomingMovies: [SeerrMedia] = []
-    var upcomingTV: [SeerrMedia] = []
+    var popularTVShows: [SeerrMedia] = []
+    var upcomingMoviesAndTVShows: [SeerrMedia] = []
     var isLoading = false
     var errorMessage: String?
     var pendingRequestsCount = 0
@@ -28,9 +32,8 @@ final class SeerrDiscoverViewModel {
     var hasContent: Bool {
         !trending.isEmpty
             || !popularMovies.isEmpty
-            || !popularTV.isEmpty
-            || !upcomingMovies.isEmpty
-            || !upcomingTV.isEmpty
+            || !popularTVShows.isEmpty
+            || !upcomingMoviesAndTVShows.isEmpty
     }
 
     var canManageRequests: Bool {
@@ -45,9 +48,8 @@ final class SeerrDiscoverViewModel {
     func reload() async {
         trending = []
         popularMovies = []
-        popularTV = []
-        upcomingMovies = []
-        upcomingTV = []
+        popularTVShows = []
+        upcomingMoviesAndTVShows = []
         await fetch(preservingExistingContent: false)
     }
 
@@ -64,25 +66,23 @@ final class SeerrDiscoverViewModel {
         defer { isLoading = false }
 
         do {
+            let upcomingFrom = SeerrDiscoverRail.upcomingBoundary()
             let repository = SeerrDiscoverRepository()
-            let trendingPage = try await repository.getTrending(page: 1)
-            let moviesPage = try await repository.discoverMovies(page: 1)
-            let tvPage = try await repository.discoverTV(page: 1)
-            let upcomingDate = Self.upcomingDateFormatter.string(from: Date())
-            let upcomingMoviesPage = try await repository.discoverMovies(
-                page: 1,
-                primaryReleaseDateGte: upcomingDate,
-            )
-            let upcomingTVPage = try await repository.discoverTV(
-                page: 1,
-                firstAirDateGte: upcomingDate,
-            )
 
-            trending = Self.inLibraryOnly(trendingPage.results)
-            popularMovies = Self.inLibraryOnly(moviesPage.results)
-            popularTV = Self.inLibraryOnly(tvPage.results)
-            upcomingMovies = Self.inLibraryOnly(upcomingMoviesPage.results)
-            upcomingTV = Self.inLibraryOnly(upcomingTVPage.results)
+            // **One loop over `SeerrDiscoverRail.allCases`.** The screen, a heading and the screen a heading opens all
+            // read the same description of what a rail is, so none of them can ask for something different from the
+            // others. The boundary is read **once**, so the merged rail and its later pages share one day.
+            for rail in SeerrDiscoverRail.allCases {
+                let page = try await rail.page(1, upcomingFrom: upcomingFrom, repository: repository)
+                let items = Self.inLibraryOnly(page.items)
+
+                switch rail {
+                case .trending: trending = items
+                case .popularMovies: popularMovies = items
+                case .popularTVShows: popularTVShows = items
+                case .upcomingMoviesAndTVShows: upcomingMoviesAndTVShows = items
+                }
+            }
         } catch {
             handleLoadError(error, preservingExistingContent: preservingExistingContent)
         }
@@ -109,13 +109,38 @@ final class SeerrDiscoverViewModel {
         }
     }
 
-    private static let upcomingDateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter
-    }()
+    /// The two upcoming routes as **one** rail: soonest first, because "upcoming" is a question about *when*.
+    ///
+    /// 2026-10-26 — Luther's fourth Discover rail is "Upcoming Movies & TV Shows", so the two routes are one list.
+    /// Neither route arrives in date order (Seerr orders each by popularity), so the merge does the ordering, and a
+    /// title with neither a release nor a first-air date goes **last** rather than to the top, where it would push
+    /// the nearest release down the rail.
+    ///
+    /// Stable: equal dates keep the order the routes returned them in, so a refresh does not reshuffle them — the
+    /// same offset trick `HomeAggregation.sortedByLastViewed` uses.
+    nonisolated static func mergedSoonestFirst(_ movies: [SeerrMedia], _ series: [SeerrMedia]) -> [SeerrMedia] {
+        let day: (SeerrMedia) -> String? = { media in
+            let value = media.releaseDate ?? media.firstAirDate
+            return (value?.isEmpty ?? true) ? nil : value
+        }
+
+        return (movies + series)
+            .enumerated()
+            .map { (offset: $0.offset, media: $0.element, day: day($0.element)) }
+            .sorted { lhs, rhs in
+                switch (lhs.day, rhs.day) {
+                case let (left?, right?) where left != right:
+                    left < right
+                case (_?, nil):
+                    true
+                case (nil, _?):
+                    false
+                default:
+                    lhs.offset < rhs.offset
+                }
+            }
+            .map(\.media)
+    }
 
     /// "Show only what's in the library": a title belongs to the library when Seerr reports the server already has
     /// it — fully available, or partially available (some seasons or episodes are present). Anything else is not in

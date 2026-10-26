@@ -2,9 +2,14 @@ import Foundation
 
 /// A `URLSession` that answers whatever a test tells it to, and nothing else.
 ///
-/// Used by `WeFlixAuthClientTests` so every branch of the client's HTTP → sentence mapping is driven by a test.
-/// It never reaches the network: `canInit` claims only the test host, and `startLoading` calls the test's own
-/// handler.
+/// Used by `WeFlixAuthClientTests` so every branch of the client's HTTP → sentence mapping is driven by a test, and
+/// by `SeerrDiscoverRailTests`. It never reaches the network: `canInit` claims a host only while a handler is
+/// registered for it, and `startLoading` calls that host's handler.
+///
+/// **Handlers are keyed by host (2026-10-26).** There used to be one handler per *process*, which was fine while
+/// exactly one suite stubbed anything — and broke the moment a second one did: Swift Testing runs suites in
+/// parallel, so the two overwrote each other's handler and *both* suites' tests failed while answering the other's
+/// request. Keying by host lets each suite hold its own, and made the pre-existing tests pass again.
 final class StubURLProtocol: URLProtocol {
     typealias Handler = @Sendable (URLRequest) throws -> (HTTPURLResponse, Data)
 
@@ -69,7 +74,7 @@ final class StubURLProtocol: URLProtocol {
     private static func reply(_ status: Int, _ data: Data, contentType: String) -> Handler {
         { request in
             let response = HTTPURLResponse(
-                url: request.url ?? URL(string: "https://weflix.test")!,
+                url: request.url ?? URL(string: "https://\(defaultHost)")!,
                 statusCode: status,
                 httpVersion: "HTTP/1.1",
                 headerFields: ["Content-Type": contentType],
@@ -79,42 +84,49 @@ final class StubURLProtocol: URLProtocol {
         }
     }
 
-    /// A session whose only protocol is this one.
-    static func session(_ handler: @escaping Handler) -> URLSession {
-        handlerStore.set(handler)
+    /// A session whose only protocol is this one, for the host its requests will go to.
+    ///
+    /// - Parameter host: the host this handler answers. Defaults to `defaultHost`, which is all
+    ///   `WeFlixAuthClientTests` needs; a second suite passes its own so the two cannot answer each other.
+    static func session(_ handler: @escaping Handler, host: String = defaultHost) -> URLSession {
+        handlerStore.set(handler, for: host)
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [StubURLProtocol.self]
 
         return URLSession(configuration: configuration)
     }
 
+    /// The host a test's stub base URL uses unless it says otherwise (`https://weflix.test`).
+    static let defaultHost = "weflix.test"
+
     /* ---------------------------------------------------------------------- */
 
-    /// `URLProtocol` is instantiated by the loading system, not by the test, so the handler has to live
-    /// somewhere reachable from the instance. One test at a time per process, which is how Swift Testing runs
-    /// them by default.
-    private static let handlerStore = HandlerBox()
+    /// `URLProtocol` is instantiated by the loading system, not by the test, so the handlers have to live
+    /// somewhere reachable from the instance — one per host, so parallel suites stay out of each other's way.
+    private static let handlerStore = HandlerStore()
 
-    private final class HandlerBox: @unchecked Sendable {
+    private final class HandlerStore: @unchecked Sendable {
         private let lock = NSLock()
-        private var handler: Handler?
+        private var handlers: [String: Handler] = [:]
 
-        func set(_ newValue: @escaping Handler) {
+        func set(_ newValue: @escaping Handler, for host: String) {
             lock.lock()
             defer { lock.unlock() }
-            handler = newValue
+            handlers[host] = newValue
         }
 
-        func current() -> Handler? {
+        func current(for host: String) -> Handler? {
             lock.lock()
             defer { lock.unlock() }
 
-            return handler
+            return handlers[host]
         }
     }
 
     override class func canInit(with request: URLRequest) -> Bool {
-        request.url?.host == "weflix.test"
+        guard let host = request.url?.host else { return false }
+
+        return handlerStore.current(for: host) != nil
     }
 
     override class func canonicalRequest(for request: URLRequest) -> URLRequest {
@@ -122,7 +134,10 @@ final class StubURLProtocol: URLProtocol {
     }
 
     override func startLoading() {
-        guard let handler = Self.handlerStore.current() else {
+        guard
+            let host = request.url?.host,
+            let handler = Self.handlerStore.current(for: host)
+        else {
             client?.urlProtocol(self, didFailWithError: URLError(.unsupportedURL))
 
             return
